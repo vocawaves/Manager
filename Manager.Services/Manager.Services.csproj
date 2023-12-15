@@ -11,8 +11,33 @@
     </ItemGroup>
 
     <ItemGroup>
+      <PackageReference Include="ManagedBass" Version="3.1.1" />
       <PackageReference Include="Mime" Version="3.6.0" />
       <PackageReference Include="z440.atl.core" Version="5.12.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Update="Natives\bass.dll">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Update="Natives\bass_aac.dll">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Update="Natives\bassasio.dll">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Update="Natives\bassflac.dll">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Update="Natives\basshls.dll">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Update="Natives\bassopus.dll">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Update="Natives\basswebm.dll">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
     </ItemGroup>
 
 </Project>

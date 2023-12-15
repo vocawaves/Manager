@@ -1,5 +1,6 @@
 ﻿using ATL;
 using HeyRed.Mime;
+using Manager.Shared;
 using Manager.Shared.Entities;
 using Manager.Shared.Interfaces;
 

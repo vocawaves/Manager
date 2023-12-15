@@ -1,5 +1,6 @@
 ﻿using Manager.Shared.Delegates;
 using Manager.Shared.Entities;
+using Manager.Shared.Enums;
 
 namespace Manager.Shared.Interfaces;
 
@@ -12,30 +13,28 @@ public interface IAudioBackendService
     public ValueTask<AudioDevice> GetCurrentlySelectedDeviceAsync();
     public ValueTask<bool> SetDeviceAsync(AudioDevice device);
     
-    public ValueTask<AudioChannel?> CreateChannelAsync(PlayItem playItem, Action<PlayItem>? onEnded = null);
-    public ValueTask<AudioChannel?> CreateChannelAsync(PlayItem playItem, float volume = 1f, Action<PlayItem>? onEnded = null);
-    public ValueTask<AudioChannel?> CreateChannelAsync(PlayItem playItem, int frequency = 44100, float volume = 1f, Action<PlayItem>? onEnded = null);
-    public ValueTask<AudioChannel?> CreateChannelAsync(PlayItem playItem, AudioDevice? device = null, int frequency = 44100, float volume = 1f, Action<PlayItem>? onEnded = null);
-    public ValueTask<bool> DestroyChannelAsync(AudioChannel channel);
+    public ValueTask<AudioDevice> GetChannelDeviceAsync(IAudioChannel channel);
+    public ValueTask<bool> SetChannelDeviceAsync(IAudioChannel channel, AudioDevice device);
     
-    public ValueTask<float> GetChannelVolumeAsync(AudioChannel channel);
-    public ValueTask<bool> SetChannelVolumeAsync(AudioChannel channel, float volume);
+    public ValueTask<IAudioChannel?> CreateChannelAsync(PlayItem playItem, Action<PlayItem>? onEnded = null);
+    public ValueTask<IAudioChannel?> CreateChannelAsync(PlayItem playItem, float volume = 1f, Action<PlayItem>? onEnded = null);
+    public ValueTask<IAudioChannel?> CreateChannelAsync(PlayItem playItem, int frequency = 44100, float volume = 1f, Action<PlayItem>? onEnded = null);
+    public ValueTask<IAudioChannel?> CreateChannelAsync(PlayItem playItem, AudioDevice? device = null, int frequency = 44100, float volume = 1f, Action<PlayItem>? onEnded = null);
+    public ValueTask<bool> DestroyChannelAsync(IAudioChannel channel);
     
-    public ValueTask<bool> PlayChannelAsync(AudioChannel channel);
-    public ValueTask<bool> PauseChannelAsync(AudioChannel channel);
-    public ValueTask<bool> ResumeChannelAsync(AudioChannel channel);
-    public ValueTask<bool> StopChannelAsync(AudioChannel channel);
+    public ValueTask<float> GetChannelVolumeAsync(IAudioChannel channel);
+    public ValueTask<bool> SetChannelVolumeAsync(IAudioChannel channel, float volume);
     
-    public ValueTask<ChannelState> GetChannelStateAsync(AudioChannel channel);
-    public ValueTask<bool> SetChannelStateAsync(AudioChannel channel, ChannelState state);
+    public ValueTask<bool> PlayChannelAsync(IAudioChannel channel);
+    public ValueTask<bool> PauseChannelAsync(IAudioChannel channel);
+    public ValueTask<bool> ResumeChannelAsync(IAudioChannel channel);
+    public ValueTask<bool> StopChannelAsync(IAudioChannel channel);
     
-    public ValueTask<double> GetChannelPositionAsync(AudioChannel channel);
-    public ValueTask<bool> SetChannelPositionAsync(AudioChannel channel, double positionMs);
-}
-
-public enum ChannelState
-{
-    Stopped,
-    Playing,
-    Paused
+    public ValueTask<ChannelState> GetChannelStateAsync(IAudioChannel channel);
+    public ValueTask<bool> SetChannelStateAsync(IAudioChannel channel, ChannelState state);
+    
+    public ValueTask<TimeSpan> GetChannelPositionAsync(IAudioChannel channel);
+    public ValueTask<bool> SetChannelPositionAsync(IAudioChannel channel, double positionMs);
+    
+    public ValueTask<TimeSpan> GetChannelLengthAsync(IAudioChannel channel);
 }

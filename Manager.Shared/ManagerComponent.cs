@@ -1,6 +1,6 @@
 ﻿using Manager.Shared.Delegates;
 
-namespace Manager.Shared.Interfaces;
+namespace Manager.Shared;
 
 public abstract class ManagerComponent(string name, ulong parent)
 {
