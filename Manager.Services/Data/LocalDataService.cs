@@ -12,10 +12,7 @@ public class LocalDataService : ManagerComponent, IDataService
     {
         this.Initialized = true;
     }
-
-    public override ValueTask<bool> InitializeAsync(params string[] options) =>
-        new(true);
-
+    
     public ValueTask<string[]> GetDirectoriesAsync(string? path = null)
     {
         if (path is not null && !Directory.Exists(path))

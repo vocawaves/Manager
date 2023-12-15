@@ -12,7 +12,8 @@ public abstract class ManagerComponent(string name, ulong parent)
 
     public ulong Parent { get; } = parent;
 
-    public abstract ValueTask<bool> InitializeAsync(params string[] options);
+    public virtual ValueTask<bool> InitializeAsync(params string[] options) =>
+        new(true);
     
     
     protected void SendError(ManagerComponent sender, string method, Exception exception, params object[] args)
