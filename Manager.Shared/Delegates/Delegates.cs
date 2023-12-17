@@ -18,6 +18,6 @@ public delegate void AudioServiceChannelDestroyedEventHandler(IAudioBackendServi
 
 public delegate void AudioServiceChannelVolumeChangedEventHandler(IAudioBackendService sender, IAudioChannel channel, float volume);
 public delegate void AudioServiceChannelStateChangedEventHandler(IAudioBackendService sender, IAudioChannel channel, ChannelState state);
-public delegate void AudioServiceChannelPositionChangedEventHandler(IAudioBackendService sender, IAudioChannel channel, double positionMs);
+public delegate void AudioServiceChannelPositionChangedEventHandler(IAudioBackendService sender, IAudioChannel channel, TimeSpan position);
 
 #endregion

@@ -63,14 +63,16 @@ public class LocalDataService : ManagerComponent, IDataService
         {
             this.SendError(this, nameof(this.GetPlayItemAsync),
                 "File does not exist", path);
-            return ValueTask.FromResult<PlayItem?>(null);
+            return ValueTask.FromResult<PlayItem?>(default);
         }
 
+        var fileType = MimeGuesser.GuessFileType(path);
         var playItem = new PlayItem
         {
             OwnerPath = path,
             OwnerId = this.Parent,
-            Format = MimeGuesser.GuessExtension(path),
+            Extension = fileType.Extension == "bin" ? Path.GetExtension(path)[1..] : fileType.Extension,
+            MimeType = fileType.MimeType,
             Title = Path.GetFileName(path),
         };
         return ValueTask.FromResult((PlayItem?)playItem);
@@ -114,8 +116,10 @@ public class LocalDataService : ManagerComponent, IDataService
                 if (track.EmbeddedPictures.Count != 0)
                 {
                     var picture = track.EmbeddedPictures[0];
+                    var typeInfo = MimeGuesser.GuessFileType(picture.PictureData);
                     item.Thumbnail = picture.PictureData;
-                    item.ThumbnailFormat = MimeGuesser.GuessExtension(picture.PictureData);
+                    item.ThumbnailExtension = typeInfo.Extension;
+                    item.ThumbnailMimeType = picture.MimeType;
                 }
             }
             catch

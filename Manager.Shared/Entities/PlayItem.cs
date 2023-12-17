@@ -2,23 +2,27 @@
 
 public class PlayItem
 {
-    public string Title { get; set; } = "Untitled";
+    public string Title { get; internal set; } = "Untitled";
     
-    public string Artist { get; set; } = string.Empty;
+    public string Artist { get; internal set; } = string.Empty;
 
-    public TimeSpan Duration { get; set; }
+    public TimeSpan Duration { get; internal set; }
 
-    public byte[]? Thumbnail { get; set; }
+    public byte[]? Thumbnail { get; internal set; }
     
-    public string? ThumbnailFormat { get; set; }
+    public string? ThumbnailExtension { get; internal set; }
+    
+    public string? ThumbnailMimeType { get; internal set; }
 
-    public required string OwnerPath { get; set; }
+    public required string OwnerPath { get; init; }
 
-    public byte[]? Data { get; set; }
+    public byte[]? Data { get; internal set; }
 
-    public required string Format { get; set; }
+    public required string Extension { get; init; }
+    
+    public required string MimeType { get; init; }
 
-    public ulong OwnerId { get; set; }
+    public required ulong OwnerId { get; init; }
 
-    public bool Cached { get; set; }
+    public bool Cached { get; internal set; }
 }
