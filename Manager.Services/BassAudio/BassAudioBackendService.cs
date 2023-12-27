@@ -12,11 +12,11 @@ namespace Manager.Services.BassAudio;
 public class BassAudioBackendService : ManagerComponent, IAudioBackendService
 {
     public event AudioServiceGlobalDeviceChangedEventHandler? GlobalDeviceChanged;
-    public event AudioServiceChannelCreatedEventHandler? ChannelCreated;
-    public event AudioServiceChannelDestroyedEventHandler? ChannelDestroyed;
+    public event BackendServiceChannelCreatedEventHandler? ChannelCreated;
+    public event BackendServiceChannelDestroyedEventHandler? ChannelDestroyed;
     public event AudioServiceChannelVolumeChangedEventHandler? ChannelVolumeChanged;
-    public event AudioServiceChannelStateChangedEventHandler? ChannelStateChanged;
-    public event AudioServiceChannelPositionChangedEventHandler? ChannelPositionChanged;
+    public event BackendServiceChannelStateChangedEventHandler? ChannelStateChanged;
+    public event BackendServiceChannelPositionChangedEventHandler? ChannelPositionChanged;
 
     public BassAudioBackendService(string name, ulong parent) : base(name, parent)
     { }
@@ -111,16 +111,16 @@ public class BassAudioBackendService : ManagerComponent, IAudioBackendService
         return new(true);
     }
 
-    public ValueTask<AudioDevice?> GetChannelDeviceAsync(IAudioChannel channel)
+    public ValueTask<AudioDevice?> GetChannelDeviceAsync(IMediaChannel channel)
     {
-        if (channel.AssociatedBackend != this)
-        {
-            this.SendError(this, nameof(GetChannelDeviceAsync), $"Channel {channel.PlayItem.Title} is not associated with this backend");
-            return new(default(AudioDevice?));
-        }
         if (channel is not BassAudioChannel bassChannel)
         {
             this.SendError(this, nameof(GetChannelDeviceAsync), $"Channel {channel.PlayItem.Title} is not a BassAudioChannel");
+            return new(default(AudioDevice?));
+        }
+        if (bassChannel.AssociatedBackend != this)
+        {
+            this.SendError(this, nameof(GetChannelDeviceAsync), $"Channel {channel.PlayItem.Title} is not associated with this backend");
             return new(default(AudioDevice?));
         }
         
@@ -134,13 +134,8 @@ public class BassAudioBackendService : ManagerComponent, IAudioBackendService
         });
     }
 
-    public ValueTask<bool> SetChannelDeviceAsync(IAudioChannel channel, AudioDevice device)
+    public ValueTask<bool> SetChannelDeviceAsync(IMediaChannel channel, AudioDevice device)
     {
-        if (channel.AssociatedBackend != this)
-        {
-            this.SendError(this, nameof(SetChannelDeviceAsync), $"Channel {channel.PlayItem.Title} is not associated with this backend");
-            return new(false);
-        }
         if (device.AssociatedBackend != this)
         {
             this.SendError(this, nameof(SetChannelDeviceAsync), $"Device {device.Name} is not associated with this backend");
@@ -149,6 +144,11 @@ public class BassAudioBackendService : ManagerComponent, IAudioBackendService
         if (channel is not BassAudioChannel bassChannel)
         {
             this.SendError(this, nameof(SetChannelDeviceAsync), $"Channel {channel.PlayItem.Title} is not a BassAudioChannel");
+            return new(false);
+        }
+        if (bassChannel.AssociatedBackend != this)
+        {
+            this.SendError(this, nameof(SetChannelDeviceAsync), $"Channel {channel.PlayItem.Title} is not associated with this backend");
             return new(false);
         }
         
@@ -170,7 +170,10 @@ public class BassAudioBackendService : ManagerComponent, IAudioBackendService
         return new(true);
     }
     
-    public ValueTask<IAudioChannel?> CreateChannelAsync(PlayItem playItem, float volume = 1f, int frequency = 44100, AudioDevice? device = null, Action<PlayItem>? onEnded = null)
+    public ValueTask<IMediaChannel?> CreateChannelAsync(PlayItem playItem, Action<PlayItem>? onEnded = null)
+        => this.CreateChannelAsync(playItem, 1f, 44100, null, onEnded);
+    
+    public ValueTask<IMediaChannel?> CreateChannelAsync(PlayItem playItem, float volume = 1f, int frequency = 44100, AudioDevice? device = null, Action<PlayItem>? onEnded = null)
     {
         if (device != null && device.AssociatedBackend != this)
         {
@@ -244,16 +247,16 @@ public class BassAudioBackendService : ManagerComponent, IAudioBackendService
         return new(channel);
     }
 
-    public ValueTask<bool> DestroyChannelAsync(IAudioChannel channel)
+    public ValueTask<bool> DestroyChannelAsync(IMediaChannel channel)
     {
-        if (channel.AssociatedBackend != this)
-        {
-            this.SendError(this, nameof(DestroyChannelAsync), $"Channel {channel.PlayItem.Title} is not associated with this backend");
-            return new(false);
-        }
         if (channel is not BassAudioChannel bassChannel)
         {
             this.SendError(this, nameof(DestroyChannelAsync), $"Channel {channel.PlayItem.Title} is not a BassAudioChannel");
+            return new(false);
+        }
+        if (bassChannel.AssociatedBackend != this)
+        {
+            this.SendError(this, nameof(DestroyChannelAsync), $"Channel {channel.PlayItem.Title} is not associated with this backend");
             return new(false);
         }
         
@@ -277,16 +280,16 @@ public class BassAudioBackendService : ManagerComponent, IAudioBackendService
         return new(true);
     }
 
-    public ValueTask<float?> GetChannelVolumeAsync(IAudioChannel channel)
+    public ValueTask<float?> GetChannelVolumeAsync(IMediaChannel channel)
     {
-        if (channel.AssociatedBackend != this)
-        {
-            this.SendError(this, nameof(GetChannelVolumeAsync), $"Channel {channel.PlayItem.Title} is not associated with this backend");
-            return new(default(float?));
-        }
         if (channel is not BassAudioChannel bassChannel)
         {
             this.SendError(this, nameof(GetChannelVolumeAsync), $"Channel {channel.PlayItem.Title} is not a BassAudioChannel");
+            return new(default(float?));
+        }
+        if (bassChannel.AssociatedBackend != this)
+        {
+            this.SendError(this, nameof(GetChannelVolumeAsync), $"Channel {channel.PlayItem.Title} is not associated with this backend");
             return new(default(float?));
         }
         
@@ -300,16 +303,16 @@ public class BassAudioBackendService : ManagerComponent, IAudioBackendService
         return new(volume);
     }
 
-    public ValueTask<bool> SetChannelVolumeAsync(IAudioChannel channel, float volume)
+    public ValueTask<bool> SetChannelVolumeAsync(IMediaChannel channel, float volume)
     {
-        if (channel.AssociatedBackend != this)
-        {
-            this.SendError(this, nameof(SetChannelVolumeAsync), $"Channel {channel.PlayItem.Title} is not associated with this backend");
-            return new(false);
-        }
         if (channel is not BassAudioChannel bassChannel)
         {
             this.SendError(this, nameof(SetChannelVolumeAsync), $"Channel {channel.PlayItem.Title} is not a BassAudioChannel");
+            return new(false);
+        }
+        if (bassChannel.AssociatedBackend != this)
+        {
+            this.SendError(this, nameof(SetChannelVolumeAsync), $"Channel {channel.PlayItem.Title} is not associated with this backend");
             return new(false);
         }
         
@@ -324,16 +327,16 @@ public class BassAudioBackendService : ManagerComponent, IAudioBackendService
         return new(true);
     }
 
-    public ValueTask<bool> PlayChannelAsync(IAudioChannel channel)
+    public ValueTask<bool> PlayChannelAsync(IMediaChannel channel)
     {
-        if (channel.AssociatedBackend != this)
-        {
-            this.SendError(this, nameof(PlayChannelAsync), $"Channel {channel.PlayItem.Title} is not associated with this backend");
-            return new(false);
-        }
         if (channel is not BassAudioChannel bassChannel)
         {
             this.SendError(this, nameof(PlayChannelAsync), $"Channel {channel.PlayItem.Title} is not a BassAudioChannel");
+            return new(false);
+        }
+        if (bassChannel.AssociatedBackend != this)
+        {
+            this.SendError(this, nameof(PlayChannelAsync), $"Channel {channel.PlayItem.Title} is not associated with this backend");
             return new(false);
         }
         
@@ -348,16 +351,16 @@ public class BassAudioBackendService : ManagerComponent, IAudioBackendService
         return new(true);
     }
 
-    public ValueTask<bool> PauseChannelAsync(IAudioChannel channel)
+    public ValueTask<bool> PauseChannelAsync(IMediaChannel channel)
     {
-        if (channel.AssociatedBackend != this)
-        {
-            this.SendError(this, nameof(PauseChannelAsync), $"Channel {channel.PlayItem.Title} is not associated with this backend");
-            return new(false);
-        }
         if (channel is not BassAudioChannel bassChannel)
         {
             this.SendError(this, nameof(PauseChannelAsync), $"Channel {channel.PlayItem.Title} is not a BassAudioChannel");
+            return new(false);
+        }
+        if (bassChannel.AssociatedBackend != this)
+        {
+            this.SendError(this, nameof(PauseChannelAsync), $"Channel {channel.PlayItem.Title} is not associated with this backend");
             return new(false);
         }
         
@@ -372,16 +375,16 @@ public class BassAudioBackendService : ManagerComponent, IAudioBackendService
         return new(true);
     }
 
-    public ValueTask<bool> ResumeChannelAsync(IAudioChannel channel)
+    public ValueTask<bool> ResumeChannelAsync(IMediaChannel channel)
     {
-        if (channel.AssociatedBackend != this)
-        {
-            this.SendError(this, nameof(ResumeChannelAsync), $"Channel {channel.PlayItem.Title} is not associated with this backend");
-            return new(false);
-        }
         if (channel is not BassAudioChannel bassChannel)
         {
             this.SendError(this, nameof(ResumeChannelAsync), $"Channel {channel.PlayItem.Title} is not a BassAudioChannel");
+            return new(false);
+        }
+        if (bassChannel.AssociatedBackend != this)
+        {
+            this.SendError(this, nameof(ResumeChannelAsync), $"Channel {channel.PlayItem.Title} is not associated with this backend");
             return new(false);
         }
         
@@ -396,16 +399,16 @@ public class BassAudioBackendService : ManagerComponent, IAudioBackendService
         return new(true);
     }
 
-    public ValueTask<bool> StopChannelAsync(IAudioChannel channel)
+    public ValueTask<bool> StopChannelAsync(IMediaChannel channel)
     {
-        if (channel.AssociatedBackend != this)
-        {
-            this.SendError(this, nameof(StopChannelAsync), $"Channel {channel.PlayItem.Title} is not associated with this backend");
-            return new(false);
-        }
         if (channel is not BassAudioChannel bassChannel)
         {
             this.SendError(this, nameof(StopChannelAsync), $"Channel {channel.PlayItem.Title} is not a BassAudioChannel");
+            return new(false);
+        }
+        if (bassChannel.AssociatedBackend != this)
+        {
+            this.SendError(this, nameof(StopChannelAsync), $"Channel {channel.PlayItem.Title} is not associated with this backend");
             return new(false);
         }
         
@@ -420,16 +423,16 @@ public class BassAudioBackendService : ManagerComponent, IAudioBackendService
         return new(true);
     }
 
-    public ValueTask<ChannelState?> GetChannelStateAsync(IAudioChannel channel)
+    public ValueTask<ChannelState?> GetChannelStateAsync(IMediaChannel channel)
     {
-        if (channel.AssociatedBackend != this)
-        {
-            this.SendError(this, nameof(GetChannelStateAsync), $"Channel {channel.PlayItem.Title} is not associated with this backend");
-            return new(default(ChannelState?));
-        }
         if (channel is not BassAudioChannel bassChannel)
         {
             this.SendError(this, nameof(GetChannelStateAsync), $"Channel {channel.PlayItem.Title} is not a BassAudioChannel");
+            return new(default(ChannelState?));
+        }
+        if (bassChannel.AssociatedBackend != this)
+        {
+            this.SendError(this, nameof(GetChannelStateAsync), $"Channel {channel.PlayItem.Title} is not associated with this backend");
             return new(default(ChannelState?));
         }
         
@@ -443,7 +446,7 @@ public class BassAudioBackendService : ManagerComponent, IAudioBackendService
         });
     }
 
-    public ValueTask<bool> SetChannelStateAsync(IAudioChannel channel, ChannelState state)
+    public ValueTask<bool> SetChannelStateAsync(IMediaChannel channel, ChannelState state)
     {
         return state switch
         {
@@ -454,16 +457,16 @@ public class BassAudioBackendService : ManagerComponent, IAudioBackendService
         };
     }
 
-    public ValueTask<TimeSpan?> GetChannelPositionAsync(IAudioChannel channel)
+    public ValueTask<TimeSpan?> GetChannelPositionAsync(IMediaChannel channel)
     {
-        if (channel.AssociatedBackend != this)
-        {
-            this.SendError(this, nameof(GetChannelPositionAsync), $"Channel {channel.PlayItem.Title} is not associated with this backend");
-            return new(default(TimeSpan?));
-        }
         if (channel is not BassAudioChannel bassChannel)
         {
             this.SendError(this, nameof(GetChannelPositionAsync), $"Channel {channel.PlayItem.Title} is not a BassAudioChannel");
+            return new(default(TimeSpan?));
+        }
+        if (bassChannel.AssociatedBackend != this)
+        {
+            this.SendError(this, nameof(GetChannelPositionAsync), $"Channel {channel.PlayItem.Title} is not associated with this backend");
             return new(default(TimeSpan?));
         }
         
@@ -472,16 +475,16 @@ public class BassAudioBackendService : ManagerComponent, IAudioBackendService
         return new(TimeSpan.FromSeconds(position));
     }
 
-    public ValueTask<bool> SetChannelPositionAsync(IAudioChannel channel, double positionMs)
+    public ValueTask<bool> SetChannelPositionAsync(IMediaChannel channel, double positionMs)
     {
-        if (channel.AssociatedBackend != this)
-        {
-            this.SendError(this, nameof(SetChannelPositionAsync), $"Channel {channel.PlayItem.Title} is not associated with this backend");
-            return new(false);
-        }
         if (channel is not BassAudioChannel bassChannel)
         {
             this.SendError(this, nameof(SetChannelPositionAsync), $"Channel {channel.PlayItem.Title} is not a BassAudioChannel");
+            return new(false);
+        }
+        if (bassChannel.AssociatedBackend != this)
+        {
+            this.SendError(this, nameof(SetChannelPositionAsync), $"Channel {channel.PlayItem.Title} is not associated with this backend");
             return new(false);
         }
         
@@ -497,19 +500,19 @@ public class BassAudioBackendService : ManagerComponent, IAudioBackendService
         return new(true);
     }
     
-    public ValueTask<bool> SetChannelPositionAsync(IAudioChannel channel, TimeSpan position)
+    public ValueTask<bool> SetChannelPositionAsync(IMediaChannel channel, TimeSpan position)
         => this.SetChannelPositionAsync(channel, position.TotalMilliseconds);
 
-    public ValueTask<TimeSpan?> GetChannelLengthAsync(IAudioChannel channel)
+    public ValueTask<TimeSpan?> GetChannelLengthAsync(IMediaChannel channel)
     {
-        if (channel.AssociatedBackend != this)
-        {
-            this.SendError(this, nameof(GetChannelLengthAsync), $"Channel {channel.PlayItem.Title} is not associated with this backend");
-            return new(default(TimeSpan?));
-        }
         if (channel is not BassAudioChannel bassChannel)
         {
             this.SendError(this, nameof(GetChannelLengthAsync), $"Channel {channel.PlayItem.Title} is not a BassAudioChannel");
+            return new(default(TimeSpan?));
+        }
+        if (bassChannel.AssociatedBackend != this)
+        {
+            this.SendError(this, nameof(GetChannelLengthAsync), $"Channel {channel.PlayItem.Title} is not associated with this backend");
             return new(default(TimeSpan?));
         }
         

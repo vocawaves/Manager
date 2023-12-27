@@ -1,0 +1,119 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:Manager.UI.ViewModels"
+             xmlns:m="clr-namespace:Manager.UI.Models"
+             xmlns:e="clr-namespace:Manager.Shared.Entities;assembly=Manager.Shared"
+             xmlns:c="clr-namespace:Manager.UI.Converters"
+             mc:Ignorable="d" d:DesignWidth="1920" d:DesignHeight="1080"
+             x:Class="Manager.UI.Pages.PlayItemManager"
+             x:DataType="vm:PlayItemManagerViewModel">
+
+    <Design.DataContext>
+        <!-- This only sets the DataContext for the previewer in an IDE,
+         to set the actual DataContext for runtime, set the DataContext property in code (look at App.axaml.cs) -->
+        <vm:PlayItemManagerViewModel />
+    </Design.DataContext>
+
+    <UserControl.Resources>
+        <c:ByteArrayToImageConverter x:Key="imgConv" />
+    </UserControl.Resources>
+
+    <Grid ColumnDefinitions="*,*,2*"
+          ShowGridLines="True">
+
+        <!-- Directory List -->
+        <ScrollViewer Grid.Column="0">
+            <ItemsControl ItemsSource="{Binding Directories}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="m:FileDirectoryItem">
+                        <Button HorizontalAlignment="Stretch"
+                                Padding="10"
+                                Command="{Binding PressedCommand}"
+                                CommandParameter="{Binding .}" >
+                            <TextBlock Text="{Binding ShortName}"
+                                       TextWrapping="Wrap"/>
+                        </Button>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+
+        <ScrollViewer Grid.Column="1">
+            <ItemsControl ItemsSource="{Binding Files}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="m:FileDirectoryItem">
+                        <Button HorizontalAlignment="Stretch"
+                                Padding="10"
+                                Command="{Binding PressedCommand}"
+                                CommandParameter="{Binding .}" >
+                            <TextBlock Text="{Binding ShortName}"
+                                       TextWrapping="Wrap"/>
+                        </Button>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+
+        <ScrollViewer Grid.Column="2">
+            <ItemsControl ItemsSource="{Binding CachedPlayItems}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="e:PlayItem">
+                        <Button HorizontalAlignment="Stretch"
+                                Padding="10"
+                                Command="{Binding $parent[UserControl].((vm:PlayItemManagerViewModel)DataContext).PlayItemSelectedCommand, FallbackValue=null}"
+                                CommandParameter="{Binding .}">
+                            <Grid ColumnDefinitions="50, *, Auto"
+                                  RowDefinitions="Auto, Auto">
+
+                                <Image Grid.Column="0"
+                                       Grid.Row="0"
+                                       Grid.RowSpan="2"
+                                       RenderOptions.BitmapInterpolationMode="HighQuality"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"
+                                       Source="{Binding Thumbnail, Converter={StaticResource imgConv}}" />
+
+                                <TextBlock Grid.Column="1"
+                                           Grid.Row="0"
+                                           VerticalAlignment="Center"
+                                           Margin="5"
+                                           Text="{Binding Title}"
+                                           TextWrapping="Wrap" />
+
+                                <TextBlock Grid.Column="1"
+                                           Grid.Row="1"
+                                           VerticalAlignment="Center"
+                                           Margin="5"
+                                           Text="{Binding Artist}"
+                                           TextWrapping="Wrap" />
+
+                                <TextBlock Grid.Column="2"
+                                           Grid.Row="0"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"
+                                           Margin="5"
+                                           Text="{Binding Duration}"
+                                           TextWrapping="Wrap" />
+
+                                <TextBlock Grid.Column="2"
+                                           Grid.Row="1"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"
+                                           Margin="5"
+                                           Text="{Binding MimeType}"
+                                           TextWrapping="Wrap" />
+
+                            </Grid>
+                        </Button>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+
+
+    </Grid>
+
+
+</UserControl>

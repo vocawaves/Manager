@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="clr-namespace:Manager.UI.ViewModels"
              xmlns:models="clr-namespace:Manager.UI.Models"
+             xmlns:p="clr-namespace:Manager.UI.Pages"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="Manager.UI.Views.MainView"
              x:DataType="vm:MainViewModel">
@@ -13,18 +14,10 @@
         <vm:MainViewModel />
     </Design.DataContext>
 
-    <ListBox ItemsSource="{Binding DirectoryItems}">
-        <ListBox.ItemTemplate>
-            <DataTemplate DataType="models:FileDirectoryItem">
-                <StackPanel Orientation="Horizontal"
-                            Spacing="5">
-                    <TextBlock Text="[Dir]"
-                               IsVisible="{Binding IsDirectory}"/>
-                    
-                    <TextBlock Text="{Binding ShortName}"/>
-                </StackPanel>
-            </DataTemplate>
-        </ListBox.ItemTemplate>
-    </ListBox>
-
+    <p:PlayItemManager>
+        <p:PlayItemManager.DataContext>
+            <vm:PlayItemManagerViewModel/>
+        </p:PlayItemManager.DataContext>
+    </p:PlayItemManager>
+    
 </UserControl>

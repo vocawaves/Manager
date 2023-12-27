@@ -1,8 +1,12 @@
-﻿namespace Manager.Shared.Entities;
+﻿using Manager.Shared.Interfaces;
+
+namespace Manager.Shared.Entities;
 
 public class PlayItem
 {
-    public string Title { get; internal set; } = "Untitled";
+    public required IDataService AssociatedDataService { get; init; }
+    
+    public string Title { get; internal set; } = string.Empty;
     
     public string Artist { get; internal set; } = string.Empty;
 

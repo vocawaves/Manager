@@ -4,6 +4,7 @@
         <TargetFramework>net8.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     </PropertyGroup>
 
     <ItemGroup>
@@ -11,10 +12,12 @@
     </ItemGroup>
 
     <ItemGroup>
+      <PackageReference Include="LibVLCSharp" Version="3.8.2" />
       <PackageReference Include="ManagedBass" Version="3.1.1" />
       <PackageReference Include="ManagedBass.Mix" Version="3.1.1" />
       <PackageReference Include="Mime" Version="3.6.0" />
-      <PackageReference Include="z440.atl.core" Version="5.12.0" />
+      <PackageReference Include="Sdcb.FFmpeg" Version="6.1.0" />
+      <PackageReference Include="VideoLAN.LibVLC.Windows" Version="3.0.20" />
     </ItemGroup>
 
     <ItemGroup>
@@ -42,6 +45,34 @@
       <None Update="Natives\bassmix.dll">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </None>
+      <None Update="avcodec-60.dll">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="avdevice-60.dll">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="avfilter-9.dll">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="avformat-60.dll">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="avutil-58.dll">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="postproc-57.dll">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="swresample-4.dll">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="swscale-7.dll">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+    </ItemGroup>
+
+    <ItemGroup>
+      <Folder Include="Natives\FFmpeg\" />
     </ItemGroup>
 
 </Project>

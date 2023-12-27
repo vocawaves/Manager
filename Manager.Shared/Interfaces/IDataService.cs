@@ -10,5 +10,10 @@ public interface IDataService
 
     public ValueTask<PlayItem?> GetPlayItemAsync(string path);
     
-    public ValueTask<bool> CachePlayItemAsync(PlayItem item);
+    public ValueTask<PlayItem?> CachePlayItemAsync(PlayItem item);
+    
+    public ValueTask<bool> RemovePlayItemFromCacheAsync(string path);
+    public ValueTask<bool> RemovePlayItemFromCacheAsync(PlayItem item);
+    
+    
 }

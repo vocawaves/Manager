@@ -13,11 +13,11 @@ public delegate void ManagerComponentErrorEventHandler(ManagerComponent sender, 
 #region Audio Service
 
 public delegate void AudioServiceGlobalDeviceChangedEventHandler(IAudioBackendService sender, AudioDevice device);
-public delegate void AudioServiceChannelCreatedEventHandler(IAudioBackendService sender, IAudioChannel channel);
-public delegate void AudioServiceChannelDestroyedEventHandler(IAudioBackendService sender, IAudioChannel channel);
+public delegate void BackendServiceChannelCreatedEventHandler(IAudioBackendService sender, IMediaChannel channel);
+public delegate void BackendServiceChannelDestroyedEventHandler(IAudioBackendService sender, IMediaChannel channel);
 
-public delegate void AudioServiceChannelVolumeChangedEventHandler(IAudioBackendService sender, IAudioChannel channel, float volume);
-public delegate void AudioServiceChannelStateChangedEventHandler(IAudioBackendService sender, IAudioChannel channel, ChannelState state);
-public delegate void AudioServiceChannelPositionChangedEventHandler(IAudioBackendService sender, IAudioChannel channel, TimeSpan position);
+public delegate void AudioServiceChannelVolumeChangedEventHandler(IAudioBackendService sender, IMediaChannel channel, float volume);
+public delegate void BackendServiceChannelStateChangedEventHandler(IAudioBackendService sender, IMediaChannel channel, ChannelState state);
+public delegate void BackendServiceChannelPositionChangedEventHandler(IAudioBackendService sender, IMediaChannel channel, TimeSpan position);
 
 #endregion
