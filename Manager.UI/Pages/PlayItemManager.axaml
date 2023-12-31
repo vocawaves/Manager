@@ -6,6 +6,7 @@
              xmlns:m="clr-namespace:Manager.UI.Models"
              xmlns:e="clr-namespace:Manager.Shared.Entities;assembly=Manager.Shared"
              xmlns:c="clr-namespace:Manager.UI.Converters"
+             xmlns:vlc="clr-namespace:LibVLCSharp.Avalonia;assembly=LibVLCSharp.Avalonia"
              mc:Ignorable="d" d:DesignWidth="1920" d:DesignHeight="1080"
              x:Class="Manager.UI.Pages.PlayItemManager"
              x:DataType="vm:PlayItemManagerViewModel">
@@ -17,14 +18,15 @@
     </Design.DataContext>
 
     <UserControl.Resources>
-        <c:ByteArrayToImageConverter x:Key="imgConv" />
+        <c:ByteArrayToImageConverter x:Key="ImgConv" />
     </UserControl.Resources>
 
     <Grid ColumnDefinitions="*,*,2*"
+          RowDefinitions="*, Auto, *"
           ShowGridLines="True">
 
         <!-- Directory List -->
-        <ScrollViewer Grid.Column="0">
+        <ScrollViewer Grid.Row="0" Grid.Column="0">
             <ItemsControl ItemsSource="{Binding Directories}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate DataType="m:FileDirectoryItem">
@@ -40,7 +42,7 @@
             </ItemsControl>
         </ScrollViewer>
 
-        <ScrollViewer Grid.Column="1">
+        <ScrollViewer Grid.Row="0" Grid.Column="1">
             <ItemsControl ItemsSource="{Binding Files}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate DataType="m:FileDirectoryItem">
@@ -56,7 +58,7 @@
             </ItemsControl>
         </ScrollViewer>
 
-        <ScrollViewer Grid.Column="2">
+        <ScrollViewer Grid.Row="0" Grid.Column="2">
             <ItemsControl ItemsSource="{Binding CachedPlayItems}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate DataType="e:PlayItem">
@@ -73,7 +75,7 @@
                                        RenderOptions.BitmapInterpolationMode="HighQuality"
                                        HorizontalAlignment="Center"
                                        VerticalAlignment="Center"
-                                       Source="{Binding Thumbnail, Converter={StaticResource imgConv}}" />
+                                       Source="{Binding Thumbnail, Converter={StaticResource ImgConv}}" />
 
                                 <TextBlock Grid.Column="1"
                                            Grid.Row="0"
@@ -111,7 +113,20 @@
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
         </ScrollViewer>
+        
+        <GridSplitter Grid.Column="0"
+                      Grid.ColumnSpan="3"
+                      Grid.Row="1"
+                      ResizeBehavior="PreviousAndNext"
+                      ResizeDirection="Rows"
+                      Width="100"
+                      Height="10"
+                      Foreground="Black"/>
 
+        <vlc:VideoView Grid.Row="2"
+                       Grid.Column="0"
+                       Grid.ColumnSpan="3"
+                       MediaPlayer="{Binding MediaPlayer}"/>
 
     </Grid>
 

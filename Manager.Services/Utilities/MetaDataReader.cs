@@ -43,6 +43,22 @@ public static class MetaDataReader
 
         return dict;
     }
+    
+    public static TimeSpan GetDuration(string path)
+    {
+        using var fCtx = FormatContext.OpenInputUrl(path);
+        if (fCtx.Duration > 0)
+        {
+            return TimeSpan.FromMicroseconds(fCtx.Duration);
+        }
+        
+        var streamWithValidDuration = fCtx.Streams.FirstOrDefault(s => s.Duration > 0);
+        
+        var duration = streamWithValidDuration.Duration;
+        var timeBase = streamWithValidDuration.TimeBase.ToDouble();
+        var durationInSeconds = duration * timeBase;
+        return TimeSpan.FromSeconds(durationInSeconds);
+    }
 
     public static async Task<byte[]?> TryReadCoverArt(string path)
     {
@@ -133,7 +149,7 @@ public static class MetaDataReader
         if (!gotFrame)
             return false;
         
-        var pngCodec = Codec.FindDecoderById(AVCodecID.Png);
+        var pngCodec = Codec.FindEncoderById(AVCodecID.Png);
         using var pngContext = new CodecContext(pngCodec);
         pngContext.PixelFormat = AVPixelFormat.Rgb24;
         pngContext.Width = frame.Width;

@@ -4,7 +4,7 @@ namespace Manager.Shared.Interfaces;
 
 public interface IAudioChannel : IMediaChannel
 {
-    public IAudioBackendService AssociatedBackend { get; }
+    public IAudioBackendService AssociatedAudioBackend { get; }
     
     public ValueTask<float?> GetVolumeAsync();
     public ValueTask<bool> SetVolumeAsync(float volume);

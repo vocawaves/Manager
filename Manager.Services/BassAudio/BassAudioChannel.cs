@@ -7,67 +7,66 @@ namespace Manager.Services.BassAudio;
 
 public class BassAudioChannel : IAudioChannel
 {
-    public IAudioBackendService AssociatedBackend { get;}
+    public IAudioBackendService AssociatedAudioBackend { get;}
     public PlayItem PlayItem { get; }
     public int BaseChannelHandle { get; }
     public int MixerChannelHandle { get; }
     
     internal BassAudioChannel(IAudioBackendService associatedBackend, PlayItem playItem, int baseChannelHandle, int mixerChannelHandle)
     {
-        this.AssociatedBackend = associatedBackend;
+        this.AssociatedAudioBackend = associatedBackend;
         this.PlayItem = playItem;
         this.BaseChannelHandle = baseChannelHandle;
         this.MixerChannelHandle = mixerChannelHandle;
     }
 
     public ValueTask<float?> GetVolumeAsync()
-        => this.AssociatedBackend.GetChannelVolumeAsync(this);
+        => this.AssociatedAudioBackend.GetChannelVolumeAsync(this);
 
     public ValueTask<bool> SetVolumeAsync(float volume)
-        => this.AssociatedBackend.SetChannelVolumeAsync(this, volume);
+        => this.AssociatedAudioBackend.SetChannelVolumeAsync(this, volume);
 
     public ValueTask<bool> PlayAsync()
-        => this.AssociatedBackend.PlayChannelAsync(this);
+        => this.AssociatedAudioBackend.PlayChannelAsync(this);
 
     public ValueTask<bool> PauseAsync()
-        => this.AssociatedBackend.PauseChannelAsync(this);
+        => this.AssociatedAudioBackend.PauseChannelAsync(this);
 
     public ValueTask<bool> ResumeAsync()
-        => this.AssociatedBackend.ResumeChannelAsync(this);
+        => this.AssociatedAudioBackend.ResumeChannelAsync(this);
 
     public ValueTask<bool> StopAsync()
-        => this.AssociatedBackend.StopChannelAsync(this);
+        => this.AssociatedAudioBackend.StopChannelAsync(this);
 
     public ValueTask<ChannelState?> GetStateAsync()
-        => this.AssociatedBackend.GetChannelStateAsync(this);
+        => this.AssociatedAudioBackend.GetChannelStateAsync(this);
 
     public ValueTask<bool> SetStateAsync(ChannelState state)
-        => this.AssociatedBackend.SetChannelStateAsync(this, state);
+        => this.AssociatedAudioBackend.SetChannelStateAsync(this, state);
 
     public ValueTask<TimeSpan?> GetPositionAsync()
-        => this.AssociatedBackend.GetChannelPositionAsync(this);
+        => this.AssociatedAudioBackend.GetChannelPositionAsync(this);
 
     public ValueTask<bool> SetPositionAsync(double positionMs)
-        => this.AssociatedBackend.SetChannelPositionAsync(this, positionMs);
+        => this.AssociatedAudioBackend.SetChannelPositionAsync(this, positionMs);
     
     public ValueTask<bool> SetPositionAsync(TimeSpan position)
-        => this.AssociatedBackend.SetChannelPositionAsync(this, position);
+        => this.AssociatedAudioBackend.SetChannelPositionAsync(this, position);
 
     public ValueTask<TimeSpan?> GetLengthAsync()
-        => this.AssociatedBackend.GetChannelLengthAsync(this);
+        => this.AssociatedAudioBackend.GetChannelLengthAsync(this);
 
     public ValueTask<AudioDevice?> GetDeviceAsync()
-        => this.AssociatedBackend.GetChannelDeviceAsync(this);
+        => this.AssociatedAudioBackend.GetChannelDeviceAsync(this);
 
     public ValueTask<bool> SetDeviceAsync(AudioDevice device)
-        => this.AssociatedBackend.SetChannelDeviceAsync(this, device);
+        => this.AssociatedAudioBackend.SetChannelDeviceAsync(this, device);
 
     public ValueTask<bool> DestroyAsync()
-        => this.AssociatedBackend.DestroyChannelAsync(this);
+        => this.AssociatedAudioBackend.DestroyChannelAsync(this);
 
     public async ValueTask DisposeAsync()
     {
         await this.DestroyAsync();
-        GC.SuppressFinalize(this);
     }
 }

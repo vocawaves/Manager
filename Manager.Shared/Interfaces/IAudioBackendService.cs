@@ -8,8 +8,8 @@ public interface IAudioBackendService : IBackendService
     public event AudioServiceGlobalDeviceChangedEventHandler? GlobalDeviceChanged;
     public event AudioServiceChannelVolumeChangedEventHandler? ChannelVolumeChanged;
     
-    public ValueTask<AudioDevice[]> GetDevicesAsync();
-    public ValueTask<AudioDevice> GetCurrentlySelectedDeviceAsync();
+    public ValueTask<AudioDevice[]?> GetDevicesAsync();
+    public ValueTask<AudioDevice?> GetCurrentlySelectedDeviceAsync();
     public ValueTask<bool> SetDeviceAsync(AudioDevice device);
     
     public ValueTask<AudioDevice?> GetChannelDeviceAsync(IMediaChannel channel);

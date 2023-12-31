@@ -1,9 +1,13 @@
-﻿using System.Collections.ObjectModel;
+﻿using System;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Avalonia.Threading;
 using CommunityToolkit.Mvvm.Input;
+using LibVLCSharp.Shared;
 using Manager.Services.Data;
+using Manager.Services.VlcVideo;
 using Manager.Shared.Entities;
 using Manager.UI.Models;
 
@@ -16,7 +20,11 @@ public partial class PlayItemManagerViewModel : ViewModelBase
     
     public ObservableCollection<PlayItem> CachedPlayItems { get; set; } = new();
     
-    private LocalDataService _localDataService = new("LDS_Test", 0);
+    private readonly LocalDataService _localDataService = new("LDS_Test", 0);
+    
+    private LibVlcVideoBackendService _videoBackendService = new("VLC_Test", 0);
+    
+    public MediaPlayer MediaPlayer { get => _videoBackendService.MediaPlayer!; }
 
     public PlayItemManagerViewModel()
     {
@@ -26,6 +34,15 @@ public partial class PlayItemManagerViewModel : ViewModelBase
             ShortName = "..",
             IsDirectory = true,
             PressedCommand = DirectorySelectedCommand
+        });
+        
+        _ = Task.Run(async () =>
+        {
+            await _videoBackendService.InitializeAsync();
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                this.OnPropertyChanged(nameof(MediaPlayer));
+            });
         });
     }
     
@@ -109,7 +126,16 @@ public partial class PlayItemManagerViewModel : ViewModelBase
     [RelayCommand]
     private async Task PlayItemSelected(PlayItem playItem)
     {
-        CachedPlayItems.Remove(playItem);
-        await this._localDataService.RemovePlayItemFromCacheAsync(playItem);
+        await this._localDataService.CachePlayItemAsync(playItem);
+        var channel = await _videoBackendService.CreateChannelAsync(playItem, null);
+        if (channel is null)
+            return;
+        
+        var could = await _videoBackendService.PlayChannelAsync(channel);
+        if (!could)
+            return;
+        await this._videoBackendService.SetChannelPositionAsync(channel, TimeSpan.FromHours(1.835));
+        //CachedPlayItems.Remove(playItem);
+        //await this._localDataService.RemovePlayItemFromCacheAsync(playItem);
     }
 }
