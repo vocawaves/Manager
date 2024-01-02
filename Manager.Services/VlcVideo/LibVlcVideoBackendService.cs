@@ -495,6 +495,7 @@ public class LibVlcVideoBackendService : ManagerComponent, ISingleVideoView,
         }
 
         this.MediaPlayer!.SeekTo(position);
+        this.ChannelPositionChanged?.Invoke(this, libVlcChannel, position);
         return ValueTask.FromResult(true);
     }
     
@@ -592,6 +593,7 @@ public class LibVlcVideoBackendService : ManagerComponent, ISingleVideoView,
         
         var volumePercent = volume * 100;
         this.MediaPlayer!.Volume = (int)volumePercent;
+        this.ChannelVolumeChanged?.Invoke(this, libVlcChannel, volume);
         return ValueTask.FromResult(true);
     }
     
