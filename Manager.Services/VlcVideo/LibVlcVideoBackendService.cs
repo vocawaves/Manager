@@ -7,7 +7,9 @@ using Manager.Shared.Interfaces;
 
 namespace Manager.Services.VlcVideo;
 
-public class LibVlcVideoBackendService : ManagerComponent, IVideoBackendService, IAudioBackendService
+public class LibVlcVideoBackendService : ManagerComponent, ISingleVideoView, 
+    IVideoBackendService, IAudioBackendService, ISubtitleBackendService,
+    IBackendSupportsVideoStreamSelection, IBackendSupportsAudioStreamSelection, IBackendSupportsSubtitleStreamSelection
 {
     public event AudioServiceGlobalDeviceChangedEventHandler? GlobalDeviceChanged;
     public event AudioServiceChannelVolumeChangedEventHandler? ChannelVolumeChanged;
@@ -17,7 +19,7 @@ public class LibVlcVideoBackendService : ManagerComponent, IVideoBackendService,
     public event BackendServiceChannelStateChangedEventHandler? ChannelStateChanged;
     public event BackendServiceChannelPositionChangedEventHandler? ChannelPositionChanged;
 
-    private LibVLC? _libVlc = null;
+    public LibVLC? LibVlc { get; private set; }
     public MediaPlayer? MediaPlayer { get; private set; }
     
     public LibVlcVideoBackendService(string name, ulong parent) : base(name, parent)
@@ -26,12 +28,12 @@ public class LibVlcVideoBackendService : ManagerComponent, IVideoBackendService,
 
     public override ValueTask<bool> InitializeAsync(params string[] options)
     {
-        _libVlc = new LibVLC(options);
-        this.MediaPlayer = new MediaPlayer(_libVlc);
+        this.LibVlc = new LibVLC(options);
+        this.MediaPlayer = new MediaPlayer(this.LibVlc);
         this.MediaPlayer.EncounteredError += (sender, args) =>
         {
             this.SendError(this, nameof(this.InitializeAsync), $"MediaPlayer encountered error {args}", args);
-            Console.WriteLine($"MediaPlayer encountered error {args}: {this._libVlc.LastLibVLCError}");
+            Console.WriteLine($"MediaPlayer encountered error {args}: {this.LibVlc.LastLibVLCError}");
         };
         this.Initialized = true;
         return ValueTask.FromResult(true);
@@ -115,6 +117,7 @@ public class LibVlcVideoBackendService : ManagerComponent, IVideoBackendService,
         }
 
         this.MediaPlayer!.SetOutputDevice(device.Id);
+        this.GlobalDeviceChanged?.Invoke(this, device);
         return ValueTask.FromResult(true);
     }
 
@@ -142,7 +145,7 @@ public class LibVlcVideoBackendService : ManagerComponent, IVideoBackendService,
                 return default;
             }
             var mediaInput = new StreamMediaInput(cacheStream);
-            media = new Media(this._libVlc!, mediaInput);
+            media = new Media(this.LibVlc!, mediaInput);
         }
         else
         {
@@ -152,9 +155,9 @@ public class LibVlcVideoBackendService : ManagerComponent, IVideoBackendService,
                 this.SendError(this, nameof(CreateChannelAsync), $"Failed to get cached path for {playItem.Title}");
                 return default;
             }
-            media = new Media(this._libVlc!, cachePath);
+            media = new Media(this.LibVlc!, cachePath);
         }
-        media = new Media(this._libVlc!, playItem.OwnerPath);
+        media = new Media(this.LibVlc!, playItem.OwnerPath);
         var status = await media.Parse();
         if (status == MediaParsedStatus.Failed)
         {
@@ -176,14 +179,6 @@ public class LibVlcVideoBackendService : ManagerComponent, IVideoBackendService,
         this.ChannelCreated?.Invoke(this, channel);
         return channel;
     }
-    
-    public ValueTask<IMediaChannel?> CreateChannelAsync(PlayItem playItem, float volume = 1, int frequency = 44100,
-        AudioDevice? device = null,
-        Action<PlayItem>? onEnded = null)
-    {
-        //Other options not supported by LibVLC
-        return this.CreateChannelAsync(playItem, onEnded);
-    }
 
     public ValueTask<bool> DestroyChannelAsync(IMediaChannel channel)
     {
@@ -197,7 +192,7 @@ public class LibVlcVideoBackendService : ManagerComponent, IVideoBackendService,
             this.SendError(this, nameof(DestroyChannelAsync), "Channel is not a LibVlcChannel");
             return ValueTask.FromResult(false);
         }
-        if (libVlcChannel.AssociatedAudioBackend != this && libVlcChannel.AssociatedVideoBackend != this)
+        if (libVlcChannel.AssociatedAudioBackend != this && libVlcChannel.AssociatedVideoBackend != this && libVlcChannel.AssociatedSubtitleBackend != this)
         {
             this.SendError(this, nameof(DestroyChannelAsync), "Channel is not associated with this backend");
             return ValueTask.FromResult(false);
@@ -213,35 +208,54 @@ public class LibVlcVideoBackendService : ManagerComponent, IVideoBackendService,
         return ValueTask.FromResult(true);
     }
 
-    public ValueTask<bool> PlayChannelAsync(IMediaChannel channel)
+    public async ValueTask<bool> PlayChannelAsync(IMediaChannel channel)
     {
         if (!this.Initialized)
         {
             this.SendError(this, nameof(PlayChannelAsync), "Service not initialized");
-            return ValueTask.FromResult(false);
+            return false;
         }
         if (channel is not LibVlcChannel libVlcChannel)
         {
             this.SendError(this, nameof(PlayChannelAsync), "Channel is not a LibVlcChannel");
-            return ValueTask.FromResult(false);
+            return false;
         }
-        if (libVlcChannel.AssociatedAudioBackend != this && libVlcChannel.AssociatedVideoBackend != this)
+        if (libVlcChannel.AssociatedAudioBackend != this && libVlcChannel.AssociatedVideoBackend != this && libVlcChannel.AssociatedSubtitleBackend != this)
         {
             this.SendError(this, nameof(PlayChannelAsync), "Channel is not associated with this backend");
-            return ValueTask.FromResult(false);
+            return false;
         }
         //TODO: Check if channel is already playing a different media and stop it
         
+        var tcs = new TaskCompletionSource();
+        this.MediaPlayer!.Playing += OnPlaying;
+
+        void OnPlaying(object? sender, EventArgs e)
+        {
+            tcs.SetResult();
+            this.MediaPlayer!.Playing -= OnPlaying;
+        }
+
         this.MediaPlayer!.Media = libVlcChannel.LibVlcMedia;
         var couldPlay = this.MediaPlayer!.Play();
         if (!couldPlay)
         {
             this.SendError(this, nameof(PlayChannelAsync), "Failed to play media");
-            return ValueTask.FromResult(false);
+            return false;
         }
         
+        await tcs.Task;
+        var convertedVolume = (int)(libVlcChannel.ChannelVolume * 100);
+        if ((int)libVlcChannel.ChannelVolume != this.MediaPlayer!.Volume)
+        {
+            this.MediaPlayer!.Volume = convertedVolume;
+        }
+        var couldVTrack = this.MediaPlayer!.SetVideoTrack(libVlcChannel.VideoStreamIndex);
+        var couldATrack = this.MediaPlayer!.SetAudioTrack(libVlcChannel.AudioStreamIndex);
+        var couldSTrack = this.MediaPlayer!.SetSpu(libVlcChannel.SubtitleStreamIndex);
+        
         this.ChannelStateChanged?.Invoke(this, libVlcChannel, ChannelState.Playing);
-        return ValueTask.FromResult(true);
+        return true;
     }
 
     public ValueTask<bool> PauseChannelAsync(IMediaChannel channel)
@@ -256,7 +270,7 @@ public class LibVlcVideoBackendService : ManagerComponent, IVideoBackendService,
             this.SendError(this, nameof(PauseChannelAsync), "Channel is not a LibVlcChannel");
             return ValueTask.FromResult(false);
         }
-        if (libVlcChannel.AssociatedAudioBackend != this && libVlcChannel.AssociatedVideoBackend != this)
+        if (libVlcChannel.AssociatedAudioBackend != this && libVlcChannel.AssociatedVideoBackend != this && libVlcChannel.AssociatedSubtitleBackend != this)
         {
             this.SendError(this, nameof(PauseChannelAsync), "Channel is not associated with this backend");
             return ValueTask.FromResult(false);
@@ -291,7 +305,7 @@ public class LibVlcVideoBackendService : ManagerComponent, IVideoBackendService,
             this.SendError(this, nameof(ResumeChannelAsync), "Channel is not a LibVlcChannel");
             return ValueTask.FromResult(false);
         }
-        if (libVlcChannel.AssociatedAudioBackend != this && libVlcChannel.AssociatedVideoBackend != this)
+        if (libVlcChannel.AssociatedAudioBackend != this && libVlcChannel.AssociatedVideoBackend != this && libVlcChannel.AssociatedSubtitleBackend != this)
         {
             this.SendError(this, nameof(ResumeChannelAsync), "Channel is not associated with this backend");
             return ValueTask.FromResult(false);
@@ -326,7 +340,7 @@ public class LibVlcVideoBackendService : ManagerComponent, IVideoBackendService,
             this.SendError(this, nameof(StopChannelAsync), "Channel is not a LibVlcChannel");
             return ValueTask.FromResult(false);
         }
-        if (libVlcChannel.AssociatedAudioBackend != this && libVlcChannel.AssociatedVideoBackend != this)
+        if (libVlcChannel.AssociatedAudioBackend != this && libVlcChannel.AssociatedVideoBackend != this && libVlcChannel.AssociatedSubtitleBackend != this)
         {
             this.SendError(this, nameof(StopChannelAsync), "Channel is not associated with this backend");
             return ValueTask.FromResult(false);
@@ -361,7 +375,7 @@ public class LibVlcVideoBackendService : ManagerComponent, IVideoBackendService,
             this.SendError(this, nameof(GetChannelStateAsync), "Channel is not a LibVlcChannel");
             return ValueTask.FromResult((ChannelState?)default(ChannelState));
         }
-        if (libVlcChannel.AssociatedAudioBackend != this && libVlcChannel.AssociatedVideoBackend != this)
+        if (libVlcChannel.AssociatedAudioBackend != this && libVlcChannel.AssociatedVideoBackend != this && libVlcChannel.AssociatedSubtitleBackend != this)
         {
             this.SendError(this, nameof(GetChannelStateAsync), "Channel is not associated with this backend");
             return ValueTask.FromResult((ChannelState?)default(ChannelState));
@@ -399,7 +413,7 @@ public class LibVlcVideoBackendService : ManagerComponent, IVideoBackendService,
             this.SendError(this, nameof(SetChannelStateAsync), "Channel is not a LibVlcChannel");
             return false;
         }
-        if (libVlcChannel.AssociatedAudioBackend != this && libVlcChannel.AssociatedVideoBackend != this)
+        if (libVlcChannel.AssociatedAudioBackend != this && libVlcChannel.AssociatedVideoBackend != this && libVlcChannel.AssociatedSubtitleBackend != this)
         {
             this.SendError(this, nameof(SetChannelStateAsync), "Channel is not associated with this backend");
             return false;
@@ -436,7 +450,7 @@ public class LibVlcVideoBackendService : ManagerComponent, IVideoBackendService,
             this.SendError(this, nameof(GetChannelPositionAsync), "Channel is not a LibVlcChannel");
             return ValueTask.FromResult((TimeSpan?)default(TimeSpan));
         }
-        if (libVlcChannel.AssociatedAudioBackend != this && libVlcChannel.AssociatedVideoBackend != this)
+        if (libVlcChannel.AssociatedAudioBackend != this && libVlcChannel.AssociatedVideoBackend != this && libVlcChannel.AssociatedSubtitleBackend != this)
         {
             this.SendError(this, nameof(GetChannelPositionAsync), "Channel is not associated with this backend");
             return ValueTask.FromResult((TimeSpan?)default(TimeSpan));
@@ -469,7 +483,7 @@ public class LibVlcVideoBackendService : ManagerComponent, IVideoBackendService,
             this.SendError(this, nameof(SetChannelPositionAsync), "Channel is not a LibVlcChannel");
             return ValueTask.FromResult(false);
         }
-        if (libVlcChannel.AssociatedAudioBackend != this && libVlcChannel.AssociatedVideoBackend != this)
+        if (libVlcChannel.AssociatedAudioBackend != this && libVlcChannel.AssociatedVideoBackend != this && libVlcChannel.AssociatedSubtitleBackend != this)
         {
             this.SendError(this, nameof(SetChannelPositionAsync), "Channel is not associated with this backend");
             return ValueTask.FromResult(false);
@@ -499,7 +513,7 @@ public class LibVlcVideoBackendService : ManagerComponent, IVideoBackendService,
             this.SendError(this, nameof(GetChannelLengthAsync), "Channel is not a LibVlcChannel");
             return ValueTask.FromResult((TimeSpan?)default(TimeSpan));
         }
-        if (libVlcChannel.AssociatedAudioBackend != this && libVlcChannel.AssociatedVideoBackend != this)
+        if (libVlcChannel.AssociatedAudioBackend != this && libVlcChannel.AssociatedVideoBackend != this && libVlcChannel.AssociatedSubtitleBackend != this)
         {
             this.SendError(this, nameof(GetChannelLengthAsync), "Channel is not associated with this backend");
             return ValueTask.FromResult((TimeSpan?)default(TimeSpan));
@@ -532,7 +546,7 @@ public class LibVlcVideoBackendService : ManagerComponent, IVideoBackendService,
             this.SendError(this, nameof(GetChannelVolumeAsync), "Channel is not a LibVlcChannel");
             return ValueTask.FromResult((float?)default(float));
         }
-        if (libVlcChannel.AssociatedAudioBackend != this && libVlcChannel.AssociatedVideoBackend != this)
+        if (libVlcChannel.AssociatedAudioBackend != this && libVlcChannel.AssociatedVideoBackend != this && libVlcChannel.AssociatedSubtitleBackend != this)
         {
             this.SendError(this, nameof(GetChannelVolumeAsync), "Channel is not associated with this backend");
             return ValueTask.FromResult((float?)default(float));
@@ -565,7 +579,7 @@ public class LibVlcVideoBackendService : ManagerComponent, IVideoBackendService,
             this.SendError(this, nameof(SetChannelVolumeAsync), "Channel is not a LibVlcChannel");
             return ValueTask.FromResult(false);
         }
-        if (libVlcChannel.AssociatedAudioBackend != this && libVlcChannel.AssociatedVideoBackend != this)
+        if (libVlcChannel.AssociatedAudioBackend != this && libVlcChannel.AssociatedVideoBackend != this && libVlcChannel.AssociatedSubtitleBackend != this)
         {
             this.SendError(this, nameof(SetChannelVolumeAsync), "Channel is not associated with this backend");
             return ValueTask.FromResult(false);
@@ -578,6 +592,218 @@ public class LibVlcVideoBackendService : ManagerComponent, IVideoBackendService,
         
         var volumePercent = volume * 100;
         this.MediaPlayer!.Volume = (int)volumePercent;
+        return ValueTask.FromResult(true);
+    }
+    
+    public ValueTask<SelectableMediaStream[]?> GetSelectableVideoStreamsAsync(IVideoChannel mediaChannel)
+    {
+        if (!this.Initialized)
+        {
+            this.SendError(this, nameof(GetSelectableVideoStreamsAsync), "Service not initialized");
+            return ValueTask.FromResult((SelectableMediaStream[]?)default(SelectableMediaStream[]));
+        }
+        if (mediaChannel is not LibVlcChannel libVlcChannel)
+        {
+            this.SendError(this, nameof(GetSelectableVideoStreamsAsync), "Channel is not a LibVlcChannel");
+            return ValueTask.FromResult((SelectableMediaStream[]?)default(SelectableMediaStream[]));
+        }
+        if (libVlcChannel.AssociatedVideoBackend != this && libVlcChannel.AssociatedSubtitleBackend != this && libVlcChannel.AssociatedAudioBackend != this)
+        {
+            this.SendError(this, nameof(GetSelectableVideoStreamsAsync), "Channel is not associated with this backend");
+            return ValueTask.FromResult((SelectableMediaStream[]?)default(SelectableMediaStream[]));
+        }
+
+        var videoStreams = new List<SelectableMediaStream>();
+        foreach (var videoStream in libVlcChannel.LibVlcMedia.Tracks.Where(x => x.TrackType == TrackType.Video))
+        {
+            var selectableVideoStream = new SelectableMediaStream
+            {
+                Identifier = videoStream.Id.ToString(),
+                Name = $"[{videoStream.Language}] {videoStream.Description}",
+            };
+            videoStreams.Add(selectableVideoStream);
+        }
+        return ValueTask.FromResult((SelectableMediaStream[]?)videoStreams.ToArray());
+    }
+
+    public ValueTask<bool> SetSelectedVideoStreamAsync(IVideoChannel mediaChannel, SelectableMediaStream? stream)
+    {
+        if (!this.Initialized)
+        {
+            this.SendError(this, nameof(GetSelectableVideoStreamsAsync), "Service not initialized");
+            return ValueTask.FromResult(false);
+        }
+        if (mediaChannel is not LibVlcChannel libVlcChannel)
+        {
+            this.SendError(this, nameof(GetSelectableVideoStreamsAsync), "Channel is not a LibVlcChannel");
+            return ValueTask.FromResult(false);
+        }
+        if (libVlcChannel.AssociatedVideoBackend != this && libVlcChannel.AssociatedSubtitleBackend != this && libVlcChannel.AssociatedAudioBackend != this)
+        {
+            this.SendError(this, nameof(GetSelectableVideoStreamsAsync), "Channel is not associated with this backend");
+            return ValueTask.FromResult(false);
+        }
+        
+        int identifier;
+        if (stream == null)
+            identifier = -1;
+        else
+            identifier = int.Parse(stream.Identifier);
+        
+        if (!Equals(this.MediaPlayer!.Media, libVlcChannel.LibVlcMedia)){
+            libVlcChannel.VideoStreamIndex = identifier;
+            return ValueTask.FromResult(true);
+        }
+        
+        var couldSet = this.MediaPlayer!.SetVideoTrack(identifier);
+        if (!couldSet)
+        {
+            this.SendError(this, nameof(SetSelectedVideoStreamAsync), "Failed to set video stream");
+            return ValueTask.FromResult(false);
+        }
+        libVlcChannel.VideoStreamIndex = identifier;
+        return ValueTask.FromResult(true);
+    }
+
+    public ValueTask<SelectableMediaStream[]?> GetSelectableAudioStreamsAsync(IAudioChannel mediaChannel)
+    {
+        if (!this.Initialized)
+        {
+            this.SendError(this, nameof(GetSelectableAudioStreamsAsync), "Service not initialized");
+            return ValueTask.FromResult((SelectableMediaStream[]?)default(SelectableMediaStream[]));
+        }
+        if (mediaChannel is not LibVlcChannel libVlcChannel)
+        {
+            this.SendError(this, nameof(GetSelectableAudioStreamsAsync), "Channel is not a LibVlcChannel");
+            return ValueTask.FromResult((SelectableMediaStream[]?)default(SelectableMediaStream[]));
+        }
+        if (libVlcChannel.AssociatedVideoBackend != this && libVlcChannel.AssociatedSubtitleBackend != this && libVlcChannel.AssociatedAudioBackend != this)
+        {
+            this.SendError(this, nameof(GetSelectableAudioStreamsAsync), "Channel is not associated with this backend");
+            return ValueTask.FromResult((SelectableMediaStream[]?)default(SelectableMediaStream[]));
+        }
+        
+        var audioStreams = new List<SelectableMediaStream>();
+        foreach (var audioStream in libVlcChannel.LibVlcMedia.Tracks.Where(x => x.TrackType == TrackType.Audio))
+        {
+            var selectableAudioStream = new SelectableMediaStream
+            {
+                Identifier = audioStream.Id.ToString(),
+                Name = $"[{audioStream.Language}] {audioStream.Description}",
+            };
+            audioStreams.Add(selectableAudioStream);
+        }
+        return ValueTask.FromResult((SelectableMediaStream[]?)audioStreams.ToArray());
+    }
+
+    public ValueTask<bool> SetSelectedAudioStreamAsync(IAudioChannel mediaChannel, SelectableMediaStream? stream)
+    {
+        if (!this.Initialized)
+        {
+            this.SendError(this, nameof(SetSelectedAudioStreamAsync), "Service not initialized");
+            return ValueTask.FromResult(false);
+        }
+        if (mediaChannel is not LibVlcChannel libVlcChannel)
+        {
+            this.SendError(this, nameof(SetSelectedAudioStreamAsync), "Channel is not a LibVlcChannel");
+            return ValueTask.FromResult(false);
+        }
+        if (libVlcChannel.AssociatedVideoBackend != this && libVlcChannel.AssociatedSubtitleBackend != this && libVlcChannel.AssociatedAudioBackend != this)
+        {
+            this.SendError(this, nameof(SetSelectedAudioStreamAsync), "Channel is not associated with this backend");
+            return ValueTask.FromResult(false);
+        }
+        
+        int identifier;
+        if (stream == null)
+            identifier = -1;
+        else
+            identifier = int.Parse(stream.Identifier);
+        
+        if (!Equals(this.MediaPlayer!.Media, libVlcChannel.LibVlcMedia)){
+            libVlcChannel.AudioStreamIndex = identifier;
+            return ValueTask.FromResult(true);
+        }
+        
+        var couldSet = this.MediaPlayer!.SetAudioTrack(identifier);
+        if (!couldSet)
+        {
+            this.SendError(this, nameof(SetSelectedAudioStreamAsync), "Failed to set audio stream");
+            return ValueTask.FromResult(false);
+        }
+        
+        libVlcChannel.AudioStreamIndex = identifier;
+        return ValueTask.FromResult(true);
+    }
+
+    public ValueTask<SelectableMediaStream[]?> GetSelectableSubtitleStreamsAsync(ISubtitleChannel mediaChannel)
+    {
+        if (!this.Initialized)
+        {
+            this.SendError(this, nameof(GetSelectableSubtitleStreamsAsync), "Service not initialized");
+            return ValueTask.FromResult((SelectableMediaStream[]?)default(SelectableMediaStream[]));
+        }
+        if (mediaChannel is not LibVlcChannel libVlcChannel)
+        {
+            this.SendError(this, nameof(GetSelectableSubtitleStreamsAsync), "Channel is not a LibVlcChannel");
+            return ValueTask.FromResult((SelectableMediaStream[]?)default(SelectableMediaStream[]));
+        }
+        if (libVlcChannel.AssociatedVideoBackend != this && libVlcChannel.AssociatedSubtitleBackend != this && libVlcChannel.AssociatedAudioBackend != this)
+        {
+            this.SendError(this, nameof(GetSelectableSubtitleStreamsAsync), "Channel is not associated with this backend");
+            return ValueTask.FromResult((SelectableMediaStream[]?)default(SelectableMediaStream[]));
+        }
+        
+        var subtitleStreams = new List<SelectableMediaStream>();
+        foreach (var subtitleStream in libVlcChannel.LibVlcMedia.Tracks.Where(x => x.TrackType == TrackType.Text))
+        {
+            var selectableSubtitleStream = new SelectableMediaStream
+            {
+                Identifier = subtitleStream.Id.ToString(),
+                Name = $"[{subtitleStream.Language}] {subtitleStream.Description}",
+            };
+            subtitleStreams.Add(selectableSubtitleStream);
+        }
+        return ValueTask.FromResult((SelectableMediaStream[]?)subtitleStreams.ToArray());
+    }
+
+    public ValueTask<bool> SetSelectedSubtitleStreamAsync(ISubtitleChannel mediaChannel, SelectableMediaStream? stream)
+    {
+        if (!this.Initialized)
+        {
+            this.SendError(this, nameof(SetSelectedSubtitleStreamAsync), "Service not initialized");
+            return ValueTask.FromResult(false);
+        }
+        if (mediaChannel is not LibVlcChannel libVlcChannel)
+        {
+            this.SendError(this, nameof(SetSelectedSubtitleStreamAsync), "Channel is not a LibVlcChannel");
+            return ValueTask.FromResult(false);
+        }
+        if (libVlcChannel.AssociatedVideoBackend != this && libVlcChannel.AssociatedSubtitleBackend != this && libVlcChannel.AssociatedAudioBackend != this)
+        {
+            this.SendError(this, nameof(SetSelectedSubtitleStreamAsync), "Channel is not associated with this backend");
+            return ValueTask.FromResult(false);
+        }
+        
+        int identifier;
+        if (stream == null)
+            identifier = -1;
+        else
+            identifier = int.Parse(stream.Identifier);
+        
+        if (!Equals(this.MediaPlayer!.Media, libVlcChannel.LibVlcMedia)){
+            libVlcChannel.SubtitleStreamIndex = identifier;
+            return ValueTask.FromResult(true);
+        }
+        
+        var couldSet = this.MediaPlayer!.SetSpu(identifier);
+        if (!couldSet)
+        {
+            this.SendError(this, nameof(SetSelectedSubtitleStreamAsync), "Failed to set subtitle stream");
+            return ValueTask.FromResult(false);
+        }
+        
+        libVlcChannel.SubtitleStreamIndex = identifier;
         return ValueTask.FromResult(true);
     }
 

@@ -9,7 +9,7 @@ using Manager.Shared.Interfaces;
 
 namespace Manager.Services.BassAudio;
 
-public class BassAudioBackendService : ManagerComponent, IAudioBackendService
+public class BassAudioBackendService : ManagerComponent, IAdvancedAudioBackendService
 {
     public event AudioServiceGlobalDeviceChangedEventHandler? GlobalDeviceChanged;
     public event BackendServiceChannelCreatedEventHandler? ChannelCreated;

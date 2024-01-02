@@ -122,7 +122,7 @@
                       Width="100"
                       Height="10"
                       Foreground="Black"/>
-
+        
         <vlc:VideoView Grid.Row="2"
                        Grid.Column="0"
                        Grid.ColumnSpan="3"

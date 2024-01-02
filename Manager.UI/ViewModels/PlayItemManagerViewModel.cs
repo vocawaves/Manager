@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Threading;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using LibVLCSharp.Shared;
 using Manager.Services.Data;
@@ -26,7 +27,7 @@ public partial class PlayItemManagerViewModel : ViewModelBase
     
     private readonly LibVlcVideoBackendService _videoBackendService = new("VLC_Test", 0);
     
-    public MediaPlayer MediaPlayer { get => _videoBackendService.MediaPlayer!; }
+    public MediaPlayer MediaPlayer => _videoBackendService.MediaPlayer!;
 
     public PlayItemManagerViewModel()
     {
@@ -139,13 +140,14 @@ public partial class PlayItemManagerViewModel : ViewModelBase
     private async Task PlayItemSelected(PlayItem playItem)
     {
         await playItem.AssociatedDataService.CachePlayItemAsync(playItem);
-        var channel = await _videoBackendService.CreateChannelAsync(playItem, null);
+        var channel = await _videoBackendService.CreateChannelAsync(playItem);
         if (channel is null)
             return;
         
         var could = await _videoBackendService.PlayChannelAsync(channel);
         if (!could)
             return;
+        
         //await this._videoBackendService.SetChannelPositionAsync(channel, TimeSpan.FromHours(1.835));
         //CachedPlayItems.Remove(playItem);
         //await this._localDataService.RemovePlayItemFromCacheAsync(playItem);
