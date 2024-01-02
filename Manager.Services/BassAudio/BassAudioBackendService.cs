@@ -185,27 +185,48 @@ public class BassAudioBackendService : ManagerComponent, IAudioBackendService
     public ValueTask<IMediaChannel?> CreateChannelAsync(PlayItem playItem, Action<PlayItem>? onEnded = null)
         => this.CreateChannelAsync(playItem, 1f, 44100, null, onEnded);
     
-    public ValueTask<IMediaChannel?> CreateChannelAsync(PlayItem playItem, float volume = 1f, int frequency = 44100, AudioDevice? device = null, Action<PlayItem>? onEnded = null)
+    public async ValueTask<IMediaChannel?> CreateChannelAsync(PlayItem playItem, float volume = 1f, int frequency = 44100, AudioDevice? device = null, Action<PlayItem>? onEnded = null)
     {
         if (device != null && device.AssociatedBackend != this)
         {
             this.SendError(this, nameof(CreateChannelAsync), $"Device {device.Name} is not associated with this backend");
-            return ValueTask.FromResult(default(IMediaChannel?));
+            return default;
         }
 
-        if (!playItem.Cached)
+        if (playItem.CacheState == CacheState.NotCached)
         {
             this.SendError(this, nameof(CreateChannelAsync), $"PlayItem {playItem.Title} is not cached");
-            return ValueTask.FromResult(default(IMediaChannel?));
+            return default;
         }
 
-        var baseHandle = Bass.CreateStream(playItem.Data, 0, playItem.Data!.Length, BassFlags.Default | BassFlags.Float | BassFlags.Decode);
+        int baseHandle;
+        if (playItem.CacheState == CacheState.Memory)
+        {
+            var cachedStream = await playItem.CacheStrategy.GetCachedStreamAsync(playItem) as MemoryStream;
+            if (cachedStream == null)
+            {
+                this.SendError(this, nameof(CreateChannelAsync), $"Failed to get cached stream for {playItem.Title}");
+                return default;
+            }
+            baseHandle = Bass.CreateStream(cachedStream.GetBuffer(), 0, cachedStream.Length, BassFlags.Default | BassFlags.Float | BassFlags.Decode);
+        }
+        else
+        {
+            var cachedPath = await playItem.CacheStrategy.GetCachedPathAsync(playItem);
+            if (cachedPath == null)
+            {
+                this.SendError(this, nameof(CreateChannelAsync), $"Failed to get cached path for {playItem.Title}");
+                return default;
+            }
+            baseHandle = Bass.CreateStream(cachedPath, 0, 0, BassFlags.Default | BassFlags.Float | BassFlags.Decode);
+        }
         
+
         if (baseHandle == 0)
         {
             var error = Bass.LastError;
             this.SendError(this, nameof(CreateChannelAsync), $"Failed to create channel for {playItem.Title}: {error}");
-            return ValueTask.FromResult(default(IMediaChannel?));
+            return default;
         }
         
         //create mixerChannel for resampling
@@ -214,7 +235,8 @@ public class BassAudioBackendService : ManagerComponent, IAudioBackendService
         {
             var error = Bass.LastError;
             this.SendError(this, nameof(CreateChannelAsync), $"Failed to create mixer channel for {playItem.Title}: {error}");
-            return ValueTask.FromResult(default(IMediaChannel?));
+            Bass.StreamFree(baseHandle);
+            return default;
         }
         
         //add stream to mixerChannel
@@ -223,14 +245,18 @@ public class BassAudioBackendService : ManagerComponent, IAudioBackendService
         {
             var error = Bass.LastError;
             this.SendError(this, nameof(CreateChannelAsync), $"Failed to add stream to mixer channel for {playItem.Title}: {error}");
-            return ValueTask.FromResult(default(IMediaChannel?));
+            Bass.StreamFree(baseHandle);
+            Bass.StreamFree(mixerHandle);
+            return default;
         }
         
         var couldParse = int.TryParse(device?.Id, out var deviceId);
         if (!couldParse)
         {
             this.SendError(this, nameof(CreateChannelAsync), $"Failed to parse device id {device?.Id}");
-            return ValueTask.FromResult(default(IMediaChannel?));
+            Bass.StreamFree(baseHandle);
+            Bass.StreamFree(mixerHandle);
+            return default;
         }
         
         var couldSetDevice = device == null || Bass.ChannelSetDevice(mixerHandle, deviceId);
@@ -238,7 +264,9 @@ public class BassAudioBackendService : ManagerComponent, IAudioBackendService
         {
             var error = Bass.LastError;
             this.SendError(this, nameof(CreateChannelAsync), $"Failed to set device {device!.Name} for channel {playItem.Title}: {error}");
-            return ValueTask.FromResult(default(IMediaChannel?));
+            Bass.StreamFree(baseHandle);
+            Bass.StreamFree(mixerHandle);
+            return default;
         }
         
         var couldSetVolume = Bass.ChannelSetAttribute(mixerHandle, ChannelAttribute.Volume, volume);
@@ -246,7 +274,9 @@ public class BassAudioBackendService : ManagerComponent, IAudioBackendService
         {
             var error = Bass.LastError;
             this.SendError(this, nameof(CreateChannelAsync), $"Failed to set volume {volume} for channel {playItem.Title}: {error}");
-            return ValueTask.FromResult(default(IMediaChannel?));
+            Bass.StreamFree(baseHandle);
+            Bass.StreamFree(mixerHandle);
+            return default;
         }
         
         if (onEnded != null)
@@ -257,13 +287,15 @@ public class BassAudioBackendService : ManagerComponent, IAudioBackendService
             {
                 var error = Bass.LastError;
                 this.SendError(this, nameof(CreateChannelAsync), $"Failed to set callback for channel {playItem.Title}: {error}");
-                return ValueTask.FromResult(default(IMediaChannel?));
+                Bass.StreamFree(baseHandle);
+                Bass.StreamFree(mixerHandle);
+                return default;
             }
         }
         
         var channel = new BassAudioChannel(this, playItem, baseHandle, mixerHandle);
         this.ChannelCreated?.Invoke(this, channel);
-        return ValueTask.FromResult((IMediaChannel?)channel);
+        return channel;
     }
 
     public ValueTask<bool> DestroyChannelAsync(IMediaChannel channel)

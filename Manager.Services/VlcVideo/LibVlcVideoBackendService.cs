@@ -126,21 +126,39 @@ public class LibVlcVideoBackendService : ManagerComponent, IVideoBackendService,
             return default;
         }
 
-        if (!playItem.Cached)
+        if (playItem.CacheState == CacheState.NotCached)
         {
             this.SendError(this, nameof(CreateChannelAsync), $"PlayItem {playItem.Title} is not cached");
             return default;
         }
         
-        //TODO: Replace byte[] cache with a stream cache, e.g. CacheStrategy.InMemory or CacheStrategy.File
-        var ms = new MemoryStream(new byte[10]);
-        //var mediaInput = new StreamMediaInput(ms);
-        var media = new Media(this._libVlc!, playItem.OwnerPath);
+        Media media;
+        if (playItem.CacheState is CacheState.Memory)
+        {
+            var cacheStream = await playItem.CacheStrategy.GetCachedStreamAsync(playItem);
+            if (cacheStream == null)
+            {
+                this.SendError(this, nameof(CreateChannelAsync), $"Failed to get cached stream for {playItem.Title}");
+                return default;
+            }
+            var mediaInput = new StreamMediaInput(cacheStream);
+            media = new Media(this._libVlc!, mediaInput);
+        }
+        else
+        {
+            var cachePath = await playItem.CacheStrategy.GetCachedPathAsync(playItem);
+            if (cachePath == null)
+            {
+                this.SendError(this, nameof(CreateChannelAsync), $"Failed to get cached path for {playItem.Title}");
+                return default;
+            }
+            media = new Media(this._libVlc!, cachePath);
+        }
+        media = new Media(this._libVlc!, playItem.OwnerPath);
         var status = await media.Parse();
         if (status == MediaParsedStatus.Failed)
         {
             this.SendError(this, nameof(CreateChannelAsync), $"Failed to parse media {playItem.Title}");
-            await ms.DisposeAsync();
             return default;
         }
 

@@ -11,6 +11,7 @@ public class ByteArrayToImageConverter : IValueConverter
         if (value is not byte[] bytes || bytes.Length == 0) 
             return null;
         var ms = new System.IO.MemoryStream(bytes);
+        ms.Position = 0;
         return new Avalonia.Media.Imaging.Bitmap(ms);
 
     }

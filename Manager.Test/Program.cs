@@ -17,7 +17,7 @@ var smallVidPath = "C:\\Users\\Sekoree\\Videos\\hartkoer_tenokk.mov";
 //var fileTags = MetaDataReader.ReadMetaDataTags(fPath);
 //var tags = MetaDataReader.ReadMetaDataTags(data);
 
-var d = new LocalDataService("Local", 0);
+var d = new LocalDataService("C:", "Local", 0);
 
 var item = await d.GetPlayItemAsync(smallVidPath);
 if (item is null)

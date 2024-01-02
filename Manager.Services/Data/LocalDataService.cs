@@ -2,18 +2,23 @@
 using HeyRed.Mime;
 using Manager.Services.Utilities;
 using Manager.Shared;
+using Manager.Shared.Cache;
 using Manager.Shared.Entities;
+using Manager.Shared.Enums;
 using Manager.Shared.Interfaces;
 
 namespace Manager.Services.Data;
 
 public class LocalDataService : ManagerComponent, IDataService
 {
+    public string MountName { get; }
     private readonly ConcurrentDictionary<string, PlayItem> _cache = new();
+    private readonly LocalPathCacheStrategy _cacheStrategy = new();
 
-    public LocalDataService(string name, ulong parent)
+    public LocalDataService(string mountName, string name, ulong parent)
         : base(name, parent)
     {
+        this.MountName = mountName;
         this.Initialized = true;
     }
 
@@ -29,7 +34,7 @@ public class LocalDataService : ManagerComponent, IDataService
         try
         {
             return ValueTask.FromResult(path is null
-                ? DriveInfo.GetDrives().Select(drive => drive.Name).ToArray()
+                ? Directory.GetDirectories(this.MountName)
                 : Directory.GetDirectories(path));
         }
         catch (Exception e)
@@ -45,10 +50,19 @@ public class LocalDataService : ManagerComponent, IDataService
     {
         try
         {
-            path ??= DriveInfo.GetDrives()[0].Name;
-            var extAsPattern = extensions.Length != 0 ? $"*.{string.Join("*.", extensions)}" : "*.*";
-            var files = Directory.GetFiles(path, extAsPattern, SearchOption.TopDirectoryOnly);
-            return ValueTask.FromResult(files);
+            path ??= this.MountName;
+            var files = Directory.GetFiles(path, "*.*", SearchOption.TopDirectoryOnly);
+            if (extensions.Length == 0)
+                return ValueTask.FromResult(files);
+            
+            var filteredFiles = new List<string>();
+            foreach (var file in files)
+            {
+                var extension = Path.GetExtension(file);
+                if (extensions.Contains(extension))
+                    filteredFiles.Add(file);
+            }
+            return ValueTask.FromResult(filteredFiles.ToArray());
         }
         catch (Exception e)
         {
@@ -84,6 +98,7 @@ public class LocalDataService : ManagerComponent, IDataService
             OwnerId = this.Parent,
             Extension = fileType.Extension,
             MimeType = fileType.MimeType,
+            CacheStrategy = _cacheStrategy
         };
 
         item = await GetMetaData(item);
@@ -132,7 +147,7 @@ public class LocalDataService : ManagerComponent, IDataService
 
     public async ValueTask<PlayItem?> CachePlayItemAsync(PlayItem item)
     {
-        if (item.Cached)
+        if (item.CacheState != CacheState.NotCached)
             return item;
 
         if (item.OwnerId != this.Parent)
@@ -151,14 +166,12 @@ public class LocalDataService : ManagerComponent, IDataService
             return default;
         }
 
-        if (_cache.TryGetValue(item.OwnerPath, out var value) && value.Cached)
+        if (_cache.TryGetValue(item.OwnerPath, out var value) && value.CacheState != CacheState.NotCached)
             return value;
 
         try
         {
-            //var fileData = await File.ReadAllBytesAsync(item.OwnerPath);
-            //item.Data = fileData;
-            item.Cached = true;
+            await item.CacheStrategy.CacheAsync(item, item.OwnerPath);
             this._cache.AddOrUpdate(item.OwnerPath, item, (_, _) => item);
             return item;
         }
@@ -167,7 +180,7 @@ public class LocalDataService : ManagerComponent, IDataService
             this.SendError(this, nameof(this.CachePlayItemAsync),
                 e,
                 item.OwnerPath);
-            return null;
+            return default;
         }
     }
 

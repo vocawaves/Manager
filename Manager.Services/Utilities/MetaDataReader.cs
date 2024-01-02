@@ -175,8 +175,8 @@ public static class MetaDataReader
         coverArt = Array.Empty<byte>();
         using var iOCtx = IOContext.ReadStream(data);
         using var fCtx = FormatContext.OpenInputIO(iOCtx);
-        if (fCtx.Streams.Any(s => s.Codecpar?.CodecType == AVMediaType.Video))
-            return false;
+        //if (fCtx.Streams.Any(s => s.Codecpar?.CodecType != AVMediaType.Video))
+        //    return false;
         var stream = fCtx.Streams.First(s => s.Codecpar?.CodecType == AVMediaType.Video);
         if (stream.Codecpar is null)
             return false; //Idk how, but sure
@@ -195,8 +195,25 @@ public static class MetaDataReader
             codecCtx.ReceiveFrame(frame);
             if (frame.Width <= 0 || frame.Height <= 0)
                 continue;
-            var coverArtData = frame.ToImageBuffer();
-            coverArt = coverArtData;
+            
+            //Convert to png
+            var pngCodec = Codec.FindEncoderById(AVCodecID.Png);
+            using var pngContext = new CodecContext(pngCodec);
+            pngContext.PixelFormat = AVPixelFormat.Rgb24;
+            pngContext.Width = frame.Width;
+            pngContext.Height = frame.Height;
+            pngContext.TimeBase = stream.TimeBase; //or maybe just 1/25??
+            
+            pngContext.Open(pngCodec);
+            using var tempFrame = Frame.CreateVideo(frame.Width, frame.Height, pngContext.PixelFormat);
+            using var converter = new VideoFrameConverter();
+            converter.ConvertFrame(frame, tempFrame);
+            
+            using var pngPacket = new Packet();
+            pngContext.SendFrame(tempFrame);
+            pngContext.ReceivePacket(pngPacket);
+            
+            coverArt = pngPacket.Data.ToArray();
             return true;
         }
 

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
@@ -9,6 +10,7 @@ using LibVLCSharp.Shared;
 using Manager.Services.Data;
 using Manager.Services.VlcVideo;
 using Manager.Shared.Entities;
+using Manager.Shared.Interfaces;
 using Manager.UI.Models;
 
 namespace Manager.UI.ViewModels;
@@ -19,15 +21,22 @@ public partial class PlayItemManagerViewModel : ViewModelBase
     public ObservableCollection<FileDirectoryItem> Files { get; set; } = new();
     
     public ObservableCollection<PlayItem> CachedPlayItems { get; set; } = new();
+
+    private readonly List<IDataService> _dataServices = new();
     
-    private readonly LocalDataService _localDataService = new("LDS_Test", 0);
-    
-    private LibVlcVideoBackendService _videoBackendService = new("VLC_Test", 0);
+    private readonly LibVlcVideoBackendService _videoBackendService = new("VLC_Test", 0);
     
     public MediaPlayer MediaPlayer { get => _videoBackendService.MediaPlayer!; }
 
     public PlayItemManagerViewModel()
     {
+        var mounts = DriveInfo.GetDrives();
+        foreach (var mount in mounts)
+        {
+            var lds = new LocalDataService(mount.Name, $"LDS_{mount.Name}", 0);
+            this._dataServices.Add(lds);
+        }
+        
         this.DirectorySelectedCommand.Execute(new FileDirectoryItem()
         {
             FullPath = string.Empty,
@@ -49,74 +58,77 @@ public partial class PlayItemManagerViewModel : ViewModelBase
     [RelayCommand]
     private async Task DirectorySelected(FileDirectoryItem directory)
     {
-        var wasDevRoot = false;
-        if (directory.ShortName == "..")
+        if (directory.ShortName == ".." && directory.FullPath == string.Empty)
         {
-            var lastSlash = directory.FullPath.LastIndexOf(Path.DirectorySeparatorChar);
-            if (lastSlash == -1)
+            this.Directories.Clear();
+            this.Files.Clear();
+            foreach (var dService in this._dataServices)
             {
-                directory.FullPath = null!;
-                wasDevRoot = true;
+                var root = new FileDirectoryItem()
+                {
+                    FullPath = dService.MountName,
+                    ShortName = dService.MountName,
+                    IsDirectory = true,
+                    PressedCommand = DirectorySelectedCommand
+                };
+                this.Directories.Add(root);
             }
-            else
-            {
-                var parentDir = directory.FullPath.Substring(0, lastSlash);
-                directory.FullPath = parentDir;
-            }
+            return;
         }
         
-        var dirs = await _localDataService.GetDirectoriesAsync(directory.FullPath);
-        Directories.Clear();
-
-        if (!wasDevRoot)
-        {
-            var backItem = new FileDirectoryItem
-            {
-                FullPath = directory.FullPath,
-                ShortName = "..",
-                IsDirectory = true,
-                PressedCommand = DirectorySelectedCommand
-            };
-            Directories.Add(backItem);
-        }
+        var dataService = this._dataServices.FirstOrDefault(x => directory.FullPath.StartsWith(x.MountName));
+        if (dataService is null)
+            return; //Bruh how
         
-        foreach (var dir in dirs)
+        var directories = await dataService.GetDirectoriesAsync(directory.FullPath);
+        var files = await dataService.GetFilesAsync(directory.FullPath);
+        
+        this.Directories.Clear();
+        this.Files.Clear();
+        
+        var previous = Path.GetDirectoryName(directory.FullPath);
+        var parent = new FileDirectoryItem()
         {
-            var dirItem = new FileDirectoryItem
+            FullPath = previous ?? string.Empty,
+            ShortName = "..",
+            IsDirectory = true,
+            PressedCommand = DirectorySelectedCommand
+        };
+        this.Directories.Add(parent);
+        
+        foreach (var dir in directories)
+        {
+            var dirItem = new FileDirectoryItem()
             {
                 FullPath = dir,
-                ShortName = Path.GetFileName(dir) == string.Empty ? dir : Path.GetFileName(dir),
+                ShortName = Path.GetFileName(dir),
                 IsDirectory = true,
                 PressedCommand = DirectorySelectedCommand
             };
-            Directories.Add(dirItem);
+            this.Directories.Add(dirItem);
         }
-        
-        if (wasDevRoot)
-            return;
-        
-        var files = await _localDataService.GetFilesAsync(directory.FullPath);
-        Files.Clear();
         
         foreach (var file in files)
         {
-            var fileItem = new FileDirectoryItem
+            var fileItem = new FileDirectoryItem()
             {
                 FullPath = file,
-                ShortName = Path.GetFileName(file) ?? "No Name",
+                ShortName = Path.GetFileName(file) ?? file,
                 IsDirectory = false,
                 PressedCommand = FileSelectedCommand
             };
-            Files.Add(fileItem);
+            this.Files.Add(fileItem);
         }
     }
     
     [RelayCommand]
     private async Task FileSelected(FileDirectoryItem file)
     {
-        if (CachedPlayItems.Any(item => item.OwnerPath == file.FullPath))
-            return;
-        var playItem = await _localDataService.GetPlayItemAsync(file.FullPath);
+        var dataService = this._dataServices.FirstOrDefault(x => file.FullPath.StartsWith(x.MountName));
+        if (dataService is null)
+            return; //Bruh how
+        
+        var playItem = await dataService.GetPlayItemAsync(file.FullPath);
         if (playItem is null)
             return;
         
@@ -126,7 +138,7 @@ public partial class PlayItemManagerViewModel : ViewModelBase
     [RelayCommand]
     private async Task PlayItemSelected(PlayItem playItem)
     {
-        await this._localDataService.CachePlayItemAsync(playItem);
+        await playItem.AssociatedDataService.CachePlayItemAsync(playItem);
         var channel = await _videoBackendService.CreateChannelAsync(playItem, null);
         if (channel is null)
             return;
@@ -134,7 +146,7 @@ public partial class PlayItemManagerViewModel : ViewModelBase
         var could = await _videoBackendService.PlayChannelAsync(channel);
         if (!could)
             return;
-        await this._videoBackendService.SetChannelPositionAsync(channel, TimeSpan.FromHours(1.835));
+        //await this._videoBackendService.SetChannelPositionAsync(channel, TimeSpan.FromHours(1.835));
         //CachedPlayItems.Remove(playItem);
         //await this._localDataService.RemovePlayItemFromCacheAsync(playItem);
     }

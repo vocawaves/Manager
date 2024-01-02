@@ -4,6 +4,8 @@ namespace Manager.Shared.Interfaces;
 
 public interface IDataService
 {
+    public string MountName { get; }
+    
     public ValueTask<string[]> GetDirectoriesAsync(string? path = null);
 
     public ValueTask<string[]> GetFilesAsync(string? path = null, params string[] extensions);

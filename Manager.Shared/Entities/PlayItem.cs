@@ -1,4 +1,5 @@
-﻿using Manager.Shared.Interfaces;
+﻿using Manager.Shared.Enums;
+using Manager.Shared.Interfaces;
 
 namespace Manager.Shared.Entities;
 
@@ -20,13 +21,13 @@ public class PlayItem
 
     public required string OwnerPath { get; init; }
 
-    public byte[]? Data { get; internal set; }
-
     public required string Extension { get; init; }
     
     public required string MimeType { get; init; }
 
     public required ulong OwnerId { get; init; }
+    
+    public required ICacheStrategy CacheStrategy { get; init; }
 
-    public bool Cached { get; internal set; }
+    public CacheState CacheState { get; internal set; } = CacheState.NotCached;
 }
