@@ -1,27 +1,28 @@
 ﻿using Manager.Shared.Entities;
 using Manager.Shared.Enums;
 using Manager.Shared.Interfaces;
+using Manager.Shared.Interfaces.Data;
 
 namespace Manager.Shared.Cache;
 
 public class InMemoryCacheStrategy : ICacheStrategy
 {
-    private Dictionary<string, MemoryStream> _cache = new();
+    private readonly Dictionary<string, MemoryStream> _cache = new();
 
-    public ValueTask<bool> CacheAsync(PlayItem playItem, byte[] data)
+    public ValueTask<bool> CacheAsync(PlaybackItem playbackItem, byte[] data)
     {
-        if (_cache.ContainsKey(playItem.OwnerPath))
+        if (_cache.ContainsKey(playbackItem.OwnerPath))
             return ValueTask.FromResult(true);
 
         var ms = new MemoryStream(data);
         ms.Seek(0, SeekOrigin.Begin);
-        _cache.Add(playItem.OwnerPath, ms);
+        _cache.Add(playbackItem.OwnerPath, ms);
         return ValueTask.FromResult(true);
     }
 
-    public async ValueTask<bool> CacheAsync(PlayItem playItem, Stream data)
+    public async ValueTask<bool> CacheAsync(PlaybackItem playbackItem, Stream data)
     {
-        if (_cache.ContainsKey(playItem.OwnerPath))
+        if (_cache.ContainsKey(playbackItem.OwnerPath))
             return true;
 
         try
@@ -29,7 +30,7 @@ public class InMemoryCacheStrategy : ICacheStrategy
             var ms = new MemoryStream();
             await data.CopyToAsync(ms);
             ms.Seek(0, SeekOrigin.Begin);
-            _cache.Add(playItem.OwnerPath, ms);
+            _cache.Add(playbackItem.OwnerPath, ms);
             return true;
         }
         catch (Exception e)
@@ -39,37 +40,37 @@ public class InMemoryCacheStrategy : ICacheStrategy
         }
     }
 
-    public async ValueTask<bool> CacheAsync(PlayItem playItem, string path)
+    public async ValueTask<bool> CacheAsync(PlaybackItem playbackItem, string path)
     {
         var ms = new MemoryStream();
         await using var fs = File.OpenRead(path);
         await fs.CopyToAsync(ms);
         ms.Seek(0, SeekOrigin.Begin);
-        _cache.Add(playItem.OwnerPath, ms);
+        _cache.Add(playbackItem.OwnerPath, ms);
         return true;
     }
 
-    public ValueTask<bool> RemoveAsync(PlayItem playItem)
+    public ValueTask<bool> RemoveAsync(PlaybackItem playbackItem)
     {
-        if (!_cache.ContainsKey(playItem.OwnerPath))
+        if (!_cache.ContainsKey(playbackItem.OwnerPath))
             return ValueTask.FromResult(false);
 
-        _cache[playItem.OwnerPath].Dispose();
-        _cache.Remove(playItem.OwnerPath);
-        playItem.CacheState = CacheState.NotCached;
+        _cache[playbackItem.OwnerPath].Dispose();
+        _cache.Remove(playbackItem.OwnerPath);
+        playbackItem.CacheState = CacheState.NotCached;
         return ValueTask.FromResult(true);
     }
 
-    public ValueTask<string?> GetCachedPathAsync(PlayItem playItem)
+    public ValueTask<string?> GetCachedPathAsync(PlaybackItem playbackItem)
     {
-        return ValueTask.FromResult((string?)playItem.OwnerPath);
+        return ValueTask.FromResult((string?)playbackItem.OwnerPath);
     }
 
-    public ValueTask<Stream?> GetCachedStreamAsync(PlayItem playItem)
+    public ValueTask<Stream?> GetCachedStreamAsync(PlaybackItem playbackItem)
     {
-        if (!_cache.ContainsKey(playItem.OwnerPath))
+        if (!_cache.ContainsKey(playbackItem.OwnerPath))
             return ValueTask.FromResult<Stream?>(null);
 
-        return ValueTask.FromResult<Stream?>(_cache[playItem.OwnerPath]);
+        return ValueTask.FromResult<Stream?>(_cache[playbackItem.OwnerPath]);
     }
 }

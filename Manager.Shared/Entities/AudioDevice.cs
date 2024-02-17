@@ -1,4 +1,5 @@
 ﻿using Manager.Shared.Interfaces;
+using Manager.Shared.Interfaces.Audio;
 
 namespace Manager.Shared.Entities;
 

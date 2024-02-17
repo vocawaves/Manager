@@ -1,7 +1,10 @@
-﻿using Sdcb.FFmpeg.Codecs;
+﻿using System.Runtime.InteropServices;
+using LibVLCSharp.Shared;
+using Sdcb.FFmpeg.Codecs;
 using Sdcb.FFmpeg.Formats;
 using Sdcb.FFmpeg.Raw;
 using Sdcb.FFmpeg.Swscales;
+using Sdcb.FFmpeg.Toolboxs.Extensions;
 using Sdcb.FFmpeg.Utils;
 
 namespace Manager.Services.Utilities;
@@ -51,8 +54,19 @@ public static class MetaDataReader
         {
             return TimeSpan.FromMicroseconds(fCtx.Duration);
         }
+        //Duration is not set, try to get it from the streams
+        fCtx.LoadStreamInfo();
+        if (fCtx.Duration > 0)
+        {
+            return TimeSpan.FromMicroseconds(fCtx.Duration);
+        }
+
+        NativeLibrary.Free(IntPtr.Zero);
         
-        var streamWithValidDuration = fCtx.Streams.FirstOrDefault(s => s.Duration > 0);
+        if (fCtx.Streams.All(s => s.Duration <= 0))
+            return TimeSpan.Zero;
+        
+        var streamWithValidDuration = fCtx.Streams.First(s => s.Duration > 0);
         
         var duration = streamWithValidDuration.Duration;
         var timeBase = streamWithValidDuration.TimeBase.ToDouble();
@@ -175,8 +189,8 @@ public static class MetaDataReader
         coverArt = Array.Empty<byte>();
         using var iOCtx = IOContext.ReadStream(data);
         using var fCtx = FormatContext.OpenInputIO(iOCtx);
-        //if (fCtx.Streams.Any(s => s.Codecpar?.CodecType != AVMediaType.Video))
-        //    return false;
+        if (fCtx.Streams.All(s => s.Codecpar?.CodecType != AVMediaType.Video))
+            return false;
         var stream = fCtx.Streams.First(s => s.Codecpar?.CodecType == AVMediaType.Video);
         if (stream.Codecpar is null)
             return false; //Idk how, but sure

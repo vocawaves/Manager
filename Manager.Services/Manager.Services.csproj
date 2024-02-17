@@ -21,30 +21,6 @@
     </ItemGroup>
 
     <ItemGroup>
-      <None Update="Natives\bass.dll">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </None>
-      <None Update="Natives\bassasio.dll">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </None>
-      <None Update="Natives\BassPlugins\basshls.dll">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </None>
-      <None Update="Natives\BassPlugins\bassflac.dll">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </None>
-      <None Update="Natives\BassPlugins\bass_aac.dll">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </None>
-      <None Update="Natives\BassPlugins\basswebm.dll">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </None>
-      <None Update="Natives\BassPlugins\bassopus.dll">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </None>
-      <None Update="Natives\bassmix.dll">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </None>
       <None Update="avcodec-60.dll">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </None>
@@ -69,10 +45,6 @@
       <None Update="swscale-7.dll">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </None>
-    </ItemGroup>
-
-    <ItemGroup>
-      <Folder Include="Natives\FFmpeg\" />
     </ItemGroup>
 
 </Project>

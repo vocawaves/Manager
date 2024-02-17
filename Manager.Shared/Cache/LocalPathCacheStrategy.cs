@@ -1,47 +1,48 @@
 ﻿using Manager.Shared.Entities;
 using Manager.Shared.Enums;
 using Manager.Shared.Interfaces;
+using Manager.Shared.Interfaces.Data;
 
 namespace Manager.Shared.Cache;
 
 public class LocalPathCacheStrategy : ICacheStrategy
 {
-    public ValueTask<bool> CacheAsync(PlayItem playItem, byte[] data)
+    public ValueTask<bool> CacheAsync(PlaybackItem playbackItem, byte[] data)
     {
         //Since this is a local path cache strategy, we don't need to cache the byte array
-        return ValueTask.FromResult(File.Exists(playItem.OwnerPath));
+        return ValueTask.FromResult(File.Exists(playbackItem.OwnerPath));
     }
 
-    public ValueTask<bool> CacheAsync(PlayItem playItem, Stream data)
+    public ValueTask<bool> CacheAsync(PlaybackItem playbackItem, Stream data)
     {
         //Since this is a local path cache strategy, we don't need to cache the stream
-        return ValueTask.FromResult(File.Exists(playItem.OwnerPath));
+        return ValueTask.FromResult(File.Exists(playbackItem.OwnerPath));
     }
 
-    public ValueTask<bool> CacheAsync(PlayItem playItem, string path)
+    public ValueTask<bool> CacheAsync(PlaybackItem playbackItem, string path)
     {
         if (!File.Exists(path))
             return ValueTask.FromResult(false);
 
-        playItem.CacheState = CacheState.LocalPath;
+        playbackItem.CacheState = CacheState.LocalPath;
         return ValueTask.FromResult(true);
     }
 
-    public ValueTask<bool> RemoveAsync(PlayItem playItem)
+    public ValueTask<bool> RemoveAsync(PlaybackItem playbackItem)
     {
-        playItem.CacheState = CacheState.NotCached;
+        playbackItem.CacheState = CacheState.NotCached;
         return ValueTask.FromResult(true);
     }
 
-    public ValueTask<string?> GetCachedPathAsync(PlayItem playItem)
+    public ValueTask<string?> GetCachedPathAsync(PlaybackItem playbackItem)
     {
-        return ValueTask.FromResult((string?)playItem.OwnerPath);
+        return ValueTask.FromResult((string?)playbackItem.OwnerPath);
     }
 
-    public ValueTask<Stream?> GetCachedStreamAsync(PlayItem playItem)
+    public ValueTask<Stream?> GetCachedStreamAsync(PlaybackItem playbackItem)
     {
-        if (playItem.CacheState != CacheState.LocalPath)
+        if (playbackItem.CacheState != CacheState.LocalPath)
             return ValueTask.FromResult<Stream?>(null);
-        return ValueTask.FromResult((Stream?)File.OpenRead(playItem.OwnerPath));
+        return ValueTask.FromResult((Stream?)File.OpenRead(playbackItem.OwnerPath));
     }
 }
