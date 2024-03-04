@@ -1,11 +1,11 @@
 ﻿using Manager.Shared.Entities;
 using Manager.Shared.Events.Data;
-using Manager.Shared.Events.General;
 using Manager.Shared.Helpers;
+using Manager.Shared.Interfaces.General;
 
 namespace Manager.Shared.Interfaces.Data;
 
-public interface IDataService
+public interface IDataService : IManagerComponent
 {
     #region Events
 
@@ -14,7 +14,9 @@ public interface IDataService
 
     #endregion
     
+    public ICacheStrategy CacheStrategy { get; }
+    
     public ValueTask<bool> CachePlayItemAsync(PlaybackItem item);
     public ValueTask<bool> RemoveFromCacheAsync(PlaybackItem item);
-    public ValueTask<PlaybackItem?> GetPlayItemAsync(FileItem item);
+    public ValueTask<PlaybackItem?> GetPlayItemFromUriAsync(string uri);
 }

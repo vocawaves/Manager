@@ -17,9 +17,13 @@ public interface IMediaChannel : IAsyncDisposable
 
     public event AsyncEventHandler? Stopped;
     
+    public event AsyncEventHandler? Ended;
+    
     public event AsyncEventHandler<ChannelStateChangedEventArgs>? StateChanged;
 
     public event AsyncEventHandler<ChannelPositionChangedEventArgs>? PositionChanged; 
+    
+    public event AsyncEventHandler<ChannelPositionTriggerInvokedEventArgs> PositionTriggerInvoked; 
     //StateChanged
     //Playing
     //Paused
@@ -34,18 +38,23 @@ public interface IMediaChannel : IAsyncDisposable
     
     public IBackendService AssociatedBackend { get; }
     public PlaybackItem PlaybackItem { get; }
+    
+    public List<PositionTrigger> PositionTriggers { get; }
 
     public ValueTask<bool> PlayAsync();
     public ValueTask<bool> PauseAsync();
     public ValueTask<bool> ResumeAsync();
     public ValueTask<bool> StopAsync();
     
-    public ValueTask<ChannelState?> GetStateAsync();
+    public ValueTask<ChannelState> GetStateAsync();
     public ValueTask<bool> SetStateAsync(ChannelState state);
     
     public ValueTask<TimeSpan?> GetPositionAsync();
     public ValueTask<bool> SetPositionAsync(double positionMs);
     public ValueTask<bool> SetPositionAsync(TimeSpan position);
+    
+    public ValueTask<PositionTrigger?> AddPositionTriggerAsync(string name, TimeSpan position);
+    public ValueTask<bool> RemovePositionTriggerAsync(PositionTrigger trigger);
     
     public ValueTask<TimeSpan?> GetLengthAsync();
     

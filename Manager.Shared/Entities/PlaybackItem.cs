@@ -13,31 +13,56 @@ namespace Manager.Shared.Entities;
 /// </summary>
 public class PlaybackItem
 {
-    public required IDataService AssociatedFileSystemService { get; init; }
-    
-    public string Title { get; internal set; } = string.Empty;
+    public IDataService AssociatedDataService { get; }
+
+    public string Title { get; }
 
     public string? CustomTitle { get; set; }
-    
-    public string Artist { get; internal set; } = string.Empty;
 
-    public TimeSpan Duration { get; internal set; }
+    public string Artist { get; }
+
+    public TimeSpan Duration { get; }
 
     public byte[]? Thumbnail { get; internal set; }
-    
+
     public string? ThumbnailExtension { get; internal set; }
-    
+
     public string? ThumbnailMimeType { get; internal set; }
 
-    public required string OwnerPath { get; init; }
+    public string OwnerPath { get; init; }
 
-    public required string Extension { get; init; }
+    public string Extension { get; init; }
+
+    public string MimeType { get; init; }
+
+    public ulong OwnerId { get; init; }
+
+    public bool IsCached { get; set; }
     
-    public required string MimeType { get; init; }
+    public Dictionary<string, string> Metadata { get; } = new();
 
-    public required ulong OwnerId { get; init; }
-    
-    public required ICacheStrategy CacheStrategy { get; init; }
+    public PlaybackItem(IDataService dataService, string ownerPath, string extension, string mimeType, string title,
+        string artist, TimeSpan duration, ulong ownerId)
+    {
+        this.AssociatedDataService = dataService;
+        this.Title = title;
+        this.Artist = artist;
+        this.Duration = duration;
+        this.OwnerId = ownerId;
+        this.OwnerPath = ownerPath;
+        this.Extension = extension;
+        this.MimeType = mimeType;
+    }
 
-    public CacheState CacheState { get; internal set; } = CacheState.NotCached;
+    public void SetThumbnail(byte[] thumbnail, string extension, string mimeType)
+    {
+        Thumbnail = thumbnail;
+        ThumbnailExtension = extension;
+        ThumbnailMimeType = mimeType;
+    }
+
+    public ValueTask<string?> GetCachedPathAsync() => this.AssociatedDataService.CacheStrategy.GetCachedPathAsync(this);
+
+    public ValueTask<Stream?> GetCachedStreamAsync() =>
+        this.AssociatedDataService.CacheStrategy.GetCachedStreamAsync(this);
 }

@@ -2,7 +2,7 @@
 
 namespace Manager.Shared.Interfaces.General;
 
-public interface IBackendService
+public interface IBackendService : IManagerComponent
 {
-    public ValueTask<IMediaChannel?> CreateChannelAsync(PlaybackItem playbackItem, Action<PlaybackItem>? onEnded = null);
+    public ValueTask<IMediaChannel?> CreateChannelAsync(PlaybackItem playbackItem);
 }

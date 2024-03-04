@@ -8,12 +8,12 @@ namespace Manager.Shared.Interfaces.Audio;
 public interface IAudioBackendService : IBackendService
 {
     //public event AudioServiceGlobalDeviceChangedEventHandler? GlobalDeviceChanged;
-    public event AsyncEventHandler<GlobalDefaultVolumeChangedEventArgs>? GlobalDefaultVolumeChanged; //idk if useful
-    public event AsyncEventHandler<GlobalAudioDeviceChangedEventArgs>? GlobalDeviceCHanged; 
+    public event AsyncEventHandler<GlobalDefaultVolumeChangedEventArgs>? GlobalVolumeChanged; //idk if useful
+    public event AsyncEventHandler<GlobalAudioDeviceChangedEventArgs>? GlobalDeviceChanged; 
     //public event AudioServiceChannelVolumeChangedEventHandler? ChannelVolumeChanged;
     
-    public ValueTask<AudioDevice[]?> GetDevicesAsync();
-    public ValueTask<AudioDevice?> GetCurrentlySelectedDeviceAsync();
+    public ValueTask<AudioDevice[]> GetDevicesAsync();
+    public ValueTask<AudioDevice> GetCurrentDeviceAsync();
     public ValueTask<bool> SetDeviceAsync(AudioDevice device);
 
     public ValueTask<float> GetDefaultVolumeAsync();

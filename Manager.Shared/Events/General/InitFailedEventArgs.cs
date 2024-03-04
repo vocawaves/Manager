@@ -1,13 +1,18 @@
-﻿namespace Manager.Shared.Events.Global;
+﻿namespace Manager.Shared.Events.General;
 
 public class InitFailedEventArgs : EventArgs
 {
-    public Exception Exception { get; }
-    public string? AdditionalInfo { get; }
+    public Exception? Exception { get; }
+    public string? Message { get; }
 
-    public InitFailedEventArgs(Exception exception, string? additionalInfo = null)
+    public InitFailedEventArgs(Exception exception, string? message = null)
     {
         this.Exception = exception;
-        this.AdditionalInfo = additionalInfo;
+        this.Message = message;
+    }
+    
+    public InitFailedEventArgs(string? message = null)
+    {
+        this.Message = message;
     }
 }

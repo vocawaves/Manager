@@ -1,41 +1,69 @@
-﻿using AsyncAwaitBestPractices;
+﻿using Manager.BassPlayer;
+using Manager.LocalDataService;
+using Manager.Shared.Entities;
+using Manager.Shared.Interfaces.General;
+using Microsoft.Extensions.Logging;
 
 namespace SandBox;
 
 internal class Program
 {
-    public static event AsyncEventHandler? TestEvent;
-
     public static async Task Main(string[] args)
     {
-        TestEvent += async (sender, eventArgs) =>
+        var lf = LoggerFactory.Create(x => x.SetMinimumLevel(LogLevel.Debug).AddConsole());
+        var b = new BassBackend(lf, "default", 0);
+        var d = new FileDataService(lf, "default", "default", 0);
+        await b.InitializeAsync();
+        
+        var allArgsExist = args.All(File.Exists);
+        if (!allArgsExist)
         {
-            await TestMethod(1, _iteration);
-            _iteration++;
-        };
-        TestEvent += async (sender, eventArgs) =>
-        {
-            await Task.Delay(5000);
-            await TestMethod(2, _iteration2);
-            _iteration2++;
-        };
-
-        for (int i = 0; i < 20; i++)
-        {
-            TestEvent.InvokeAsync(null!, EventArgs.Empty).SafeFireAndForget();
-            Console.WriteLine("after");
-            await Task.Delay(1000);
+            Console.WriteLine("Not all files exist");
+            return;
         }
-        Console.ReadLine();
-    }
 
-    private static int _iteration = 0;
-    private static int _iteration2 = 0;
+        foreach (var mediaFile in args)
+        {
+            var pi = await d.GetPlayItemFromUriAsync(mediaFile);
+            if (pi is null)
+            {
+                Console.WriteLine($"Failed to get playback item for {mediaFile}");
+                continue;
+            }
 
-    private static ValueTask TestMethod(int num, int iter)
-    {
-        Console.WriteLine(num + " Iteration: " + iter);
-        //Console.WriteLine(Stopwatch.GetTimestamp());
-        return ValueTask.CompletedTask;
+            var couldCache = await d.CachePlayItemAsync(pi);
+            if (!couldCache)
+            {
+                Console.WriteLine($"Failed to cache {mediaFile}");
+                continue;
+            }
+            
+            var channel = await b.CreateChannelAsync(pi);
+            if (channel is null)
+            {
+                Console.WriteLine($"Failed to create channel for {mediaFile}");
+                continue;
+            }
+
+            channel.Playing += (sender, args) =>
+            {
+                var pi = (IMediaChannel) sender;
+                Console.WriteLine($"Playing {pi.PlaybackItem.Title} by {pi.PlaybackItem.Artist} ({pi.PlaybackItem.Duration})");
+                return ValueTask.CompletedTask;
+            };
+            
+            var tcs = new TaskCompletionSource<bool>();
+            //set true when the channel fires the PlaybackFinished event
+            channel.Ended += (sender, args) =>
+            {
+                tcs.SetResult(true);
+                return ValueTask.CompletedTask;
+            };
+            
+            await channel.PlayAsync();
+            await tcs.Task;
+            await channel.DisposeAsync();
+            await d.RemoveFromCacheAsync(pi);
+        }
     }
 }

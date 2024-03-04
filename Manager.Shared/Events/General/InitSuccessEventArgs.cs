@@ -1,11 +1,11 @@
-﻿namespace Manager.Shared.Events.Global;
+﻿namespace Manager.Shared.Events.General;
 
 public class InitSuccessEventArgs : System.EventArgs
 {
-    public string? AdditionalInfo { get; }
+    public string? Message { get; }
 
-    public InitSuccessEventArgs(string? additionalInfo = null)
+    public InitSuccessEventArgs(string? message = null)
     {
-        this.AdditionalInfo = additionalInfo;
+        this.Message = message;
     }
 }

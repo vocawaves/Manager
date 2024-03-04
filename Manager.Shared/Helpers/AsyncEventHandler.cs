@@ -1,4 +1,5 @@
-﻿using ValueTaskSupplement;
+﻿using AsyncAwaitBestPractices;
+using ValueTaskSupplement;
 
 //Taken from https://github.com/TAGC/AsyncEvent
 //Modified to use ValueTask instead of Task
@@ -81,6 +82,8 @@ namespace Manager.Shared.Helpers
 
             return ValueTaskEx.WhenAll(tasks);
         }
+        
+        
 
         /// <summary>
         /// Asynchronously invokes an event, dispatching the provided event arguments to all registered handlers.
@@ -107,6 +110,35 @@ namespace Manager.Shared.Helpers
             var tasks = delegates.Select(it => it.Invoke(sender, eventArgs));
 
             return ValueTaskEx.WhenAll(tasks);
+        }
+        
+        public static void InvokeAndForget(this AsyncEventHandler? eventHandler, object sender, EventArgs eventArgs)
+        {
+            if (eventHandler == null)
+            {
+                return;
+            }
+
+            var delegates = eventHandler.GetInvocationList().Cast<AsyncEventHandler>();
+            var tasks = delegates.Select(it => it.Invoke(sender, eventArgs));
+
+            ValueTaskEx.WhenAll(tasks).SafeFireAndForget();
+        }
+        
+        public static void InvokeAndForget<TEventArgs>(
+            this AsyncEventHandler<TEventArgs>? eventHandler,
+            object sender,
+            TEventArgs eventArgs)
+        {
+            if (eventHandler == null)
+            {
+                return;
+            }
+
+            var delegates = eventHandler.GetInvocationList().Cast<AsyncEventHandler<TEventArgs>>();
+            var tasks = delegates.Select(it => it.Invoke(sender, eventArgs));
+
+            ValueTaskEx.WhenAll(tasks).SafeFireAndForget();
         }
     }
 }

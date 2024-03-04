@@ -5,13 +5,19 @@ VisualStudioVersion = 17.7.34024.191
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Manager.Shared", "Manager.Shared\Manager.Shared.csproj", "{C9557DE8-92C3-41F4-BD49-F7931BEC1AA8}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Manager.Services", "Manager.Services\Manager.Services.csproj", "{04CD3CE3-B2C5-473E-A112-CB032C294ECE}"
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "MediaBackends", "MediaBackends", "{94BA4DB5-9A97-4539-9156-FD14B3883E0F}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Manager.BassPlayer", "Manager.BassPlayer\Manager.BassPlayer.csproj", "{E366F1BA-5A28-445B-B158-ECE03745B5B4}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SandBox", "SandBox\SandBox.csproj", "{3C2CDE88-2D1B-446D-AABA-BC61FF357008}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "DataBackends", "DataBackends", "{6DD60532-A29E-4D3B-AC9D-6AA9C1405682}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Manager.LocalDataService", "Manager.LocalDataService\Manager.LocalDataService.csproj", "{AEE8ECE2-D5F3-4400-BE0A-302B4587ABA6}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Utilities", "Utilities", "{7C197F80-930E-45A9-98BD-0295D9EEE49F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MetadataReader.FFMPEG", "MetadataReader.FFMPEG\MetadataReader.FFMPEG.csproj", "{2E6CD4AB-CD46-4DF0-951C-7F817236DABA}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -23,10 +29,6 @@ Global
 		{C9557DE8-92C3-41F4-BD49-F7931BEC1AA8}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C9557DE8-92C3-41F4-BD49-F7931BEC1AA8}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C9557DE8-92C3-41F4-BD49-F7931BEC1AA8}.Release|Any CPU.Build.0 = Release|Any CPU
-		{04CD3CE3-B2C5-473E-A112-CB032C294ECE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{04CD3CE3-B2C5-473E-A112-CB032C294ECE}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{04CD3CE3-B2C5-473E-A112-CB032C294ECE}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{04CD3CE3-B2C5-473E-A112-CB032C294ECE}.Release|Any CPU.Build.0 = Release|Any CPU
 		{E366F1BA-5A28-445B-B158-ECE03745B5B4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{E366F1BA-5A28-445B-B158-ECE03745B5B4}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E366F1BA-5A28-445B-B158-ECE03745B5B4}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -35,6 +37,14 @@ Global
 		{3C2CDE88-2D1B-446D-AABA-BC61FF357008}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3C2CDE88-2D1B-446D-AABA-BC61FF357008}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3C2CDE88-2D1B-446D-AABA-BC61FF357008}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AEE8ECE2-D5F3-4400-BE0A-302B4587ABA6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AEE8ECE2-D5F3-4400-BE0A-302B4587ABA6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AEE8ECE2-D5F3-4400-BE0A-302B4587ABA6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AEE8ECE2-D5F3-4400-BE0A-302B4587ABA6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2E6CD4AB-CD46-4DF0-951C-7F817236DABA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2E6CD4AB-CD46-4DF0-951C-7F817236DABA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2E6CD4AB-CD46-4DF0-951C-7F817236DABA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2E6CD4AB-CD46-4DF0-951C-7F817236DABA}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -44,5 +54,7 @@ Global
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{E366F1BA-5A28-445B-B158-ECE03745B5B4} = {94BA4DB5-9A97-4539-9156-FD14B3883E0F}
+		{AEE8ECE2-D5F3-4400-BE0A-302B4587ABA6} = {6DD60532-A29E-4D3B-AC9D-6AA9C1405682}
+		{2E6CD4AB-CD46-4DF0-951C-7F817236DABA} = {7C197F80-930E-45A9-98BD-0295D9EEE49F}
 	EndGlobalSection
 EndGlobal

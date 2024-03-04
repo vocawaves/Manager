@@ -1,15 +1,13 @@
 ﻿using System.Runtime.InteropServices;
-using LibVLCSharp.Shared;
 using Sdcb.FFmpeg.Codecs;
 using Sdcb.FFmpeg.Formats;
 using Sdcb.FFmpeg.Raw;
 using Sdcb.FFmpeg.Swscales;
-using Sdcb.FFmpeg.Toolboxs.Extensions;
 using Sdcb.FFmpeg.Utils;
 
-namespace Manager.Services.Utilities;
+namespace MetadataReader.FFMPEG;
 
-public static class MetaDataReader
+public class FfmpegReader
 {
     public static Dictionary<string, string> ReadMetaDataTags(string path)
     {
@@ -182,8 +180,6 @@ public static class MetaDataReader
         
         return true;
     }
-
-
     private static bool TryReadCoverArtNative(Stream data, out byte[]? coverArt)
     {
         coverArt = Array.Empty<byte>();
@@ -233,7 +229,6 @@ public static class MetaDataReader
 
         return false;
     }
-
     private static async Task<byte[]?> TryFindCoverArt(string path)
     {
         try

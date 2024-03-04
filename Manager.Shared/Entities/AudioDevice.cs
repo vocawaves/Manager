@@ -5,7 +5,19 @@ namespace Manager.Shared.Entities;
 
 public class AudioDevice
 {
-    public required IAudioBackendService AssociatedBackend { get; set; }
-    public required string Name { get; set; }
-    public required string Id { get; set; }
+    public IAudioBackendService AssociatedBackend { get; private set; }
+    public string Name { get; private set; }
+    public string Id { get; private set; }
+    
+    public AudioDevice(IAudioBackendService backend, string name, string id)
+    {
+        this.AssociatedBackend = backend;
+        this.Name = name;
+        this.Id = id;
+    }
+    
+    public override string ToString()
+    {
+        return $"{Id} - {Name} -> {AssociatedBackend.Name}";
+    }
 }

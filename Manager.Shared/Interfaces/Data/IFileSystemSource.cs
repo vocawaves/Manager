@@ -7,9 +7,11 @@ public interface IFileSystemSource : IDataService
     //Instead of string IDirectoryItem -> GetParent
     //                                 -> GetFiles etc.
     //No
-    
+
     public string MountName { get; }
-    
+
+
+    public ValueTask<PlaybackItem?> GetPlayItemAsync(FileItem item);
     public ValueTask<DirectoryItem[]> GetDirectoriesAsync(string? path = null);
     public ValueTask<FileItem[]> GetFilesAsync(DirectoryItem? item = null, params string[] extensions);
 

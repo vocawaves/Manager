@@ -4,5 +4,7 @@ public enum ChannelState
 {
     Stopped,
     Playing,
-    Paused
+    Paused,
+    Ended,
+    Invalid
 }
