@@ -31,4 +31,10 @@ public class AudioItem : MediaItem
         AlbumArt = albumArt;
         AlbumArtMimeType = albumArtMimeType;
     }
+    
+    public override async ValueTask DisposeAsync()
+    {
+        if (this.IsCached)
+            await this.RemoveFromCacheAsync();
+    }
 }

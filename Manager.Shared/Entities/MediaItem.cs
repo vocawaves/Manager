@@ -2,7 +2,7 @@
 
 namespace Manager.Shared.Entities;
 
-public class MediaItem
+public class MediaItem : IAsyncDisposable
 {
     public string SourcePath { get; }
     public ulong OwnerId { get; }
@@ -45,5 +45,11 @@ public class MediaItem
     public ValueTask<bool> RemoveFromCacheAsync()
     {
         return this.DataService.RemoveFromCacheAsync(this);
+    }
+
+    public virtual async ValueTask DisposeAsync()
+    {
+        if (this.IsCached)
+            await this.RemoveFromCacheAsync();
     }
 }
