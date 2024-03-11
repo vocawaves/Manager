@@ -13,7 +13,7 @@ public interface IChannelSupportsSubtitleSlaves
 
     #endregion
 
-    public List<PlaybackItem> SubtitleSlaves { get; }
-    public ValueTask<bool> AddSubtitleSlaveAsync(PlaybackItem playbackItem);
-    public ValueTask<bool> RemoveSubtitleSlaveAsync(PlaybackItem playbackItem);
+    public List<SubtitleItem> SubtitleSlaves { get; }
+    public ValueTask<bool> AddSubtitleSlaveAsync(SubtitleItem subtitleItem);
+    public ValueTask<bool> RemoveSubtitleSlaveAsync(SubtitleItem subtitleItem);
 }

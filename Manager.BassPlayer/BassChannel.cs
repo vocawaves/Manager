@@ -27,7 +27,8 @@ public class BassChannel : IAudioChannel
     public event AsyncEventHandler<ChannelDeviceChangedEventArgs>? ChannelDeviceChanged;
 
     public IBackendService AssociatedBackend { get; }
-    public PlaybackItem PlaybackItem { get; }
+    public AudioItem AudioItem { get; }
+    public MediaItem MediaItem => this.AudioItem;
     public List<PositionTrigger> PositionTriggers { get; } = new();
     private readonly Dictionary<PositionTrigger, int> _positionTriggerHandles = new();
 
@@ -35,13 +36,13 @@ public class BassChannel : IAudioChannel
     //private PeriodicTimer _positionTimer = new PeriodicTimer(TimeSpan.FromMilliseconds(10));
     private Timer _positionTimer = new Timer(TimeSpan.FromMilliseconds(1000.0 / 60.0));
 
-    public BassChannel(ILogger<BassChannel> logger, IBackendService associatedBackend, PlaybackItem playbackItem,
+    public BassChannel(ILogger<BassChannel> logger, IBackendService associatedBackend, AudioItem audioItem,
         int bassChannel)
     {
         this._logger = logger;
         this._bassChannel = bassChannel;
         this.AssociatedBackend = associatedBackend;
-        this.PlaybackItem = playbackItem;
+        this.AudioItem = audioItem;
         SetupEvents();
         this.SetupPosition();
     }

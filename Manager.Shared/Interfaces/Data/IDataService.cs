@@ -1,22 +1,13 @@
 ﻿using Manager.Shared.Entities;
-using Manager.Shared.Events.Data;
-using Manager.Shared.Helpers;
 using Manager.Shared.Interfaces.General;
 
 namespace Manager.Shared.Interfaces.Data;
 
 public interface IDataService : IManagerComponent
 {
-    #region Events
-
-    //CacheFailed?
-    public event AsyncEventHandler<CacheFailedEventArgs>? CacheFailed; 
-
-    #endregion
+    public ValueTask<bool> CachePlayItemAsync(MediaItem item);
+    public ValueTask<bool> RemoveFromCacheAsync(MediaItem item);
     
-    public ICacheStrategy CacheStrategy { get; }
-    
-    public ValueTask<bool> CachePlayItemAsync(PlaybackItem item);
-    public ValueTask<bool> RemoveFromCacheAsync(PlaybackItem item);
-    public ValueTask<PlaybackItem?> GetPlayItemFromUriAsync(string uri);
+    public ValueTask<string?> GetCachedMediaItemPathAsync(MediaItem item);
+    public ValueTask<Stream?> GetCachedMediaItemStreamAsync(MediaItem item);
 }

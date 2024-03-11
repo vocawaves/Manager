@@ -1,7 +1,9 @@
 ﻿using Manager.BassPlayer;
 using Manager.LocalDataService;
 using Manager.Shared.Entities;
+using Manager.Shared.Interfaces.Data;
 using Manager.Shared.Interfaces.General;
+using Manager.YouTubeDataService;
 using Microsoft.Extensions.Logging;
 
 namespace SandBox;
@@ -10,60 +12,49 @@ internal class Program
 {
     public static async Task Main(string[] args)
     {
-        var lf = LoggerFactory.Create(x => x.SetMinimumLevel(LogLevel.Debug).AddConsole());
-        var b = new BassBackend(lf, "default", 0);
-        var d = new FileDataService(lf, "default", "default", 0);
-        await b.InitializeAsync();
+        //args = new[] { "C:\\Users\\Sekoree\\Music\\2017.10.15 [IO-0311] 東方氷雪大感謝 [秋例大祭4]\\(01) [IOSYS] チルノのパーフェクトさんすう教室 \u2468周年バージョン.flac" };
+        var lf = LoggerFactory.Create(builder => builder.AddConsole());
+        var dataService = new LocalDataService(lf, "Basic", 0, "C:\\");
+        var ytService = new YouTubeDataService(lf, "YouTube", 0);
+        var audioBackend = new BassBackend(lf, "Bass", 0);
+        await audioBackend.InitializeAsync();
         
-        var allArgsExist = args.All(File.Exists);
-        if (!allArgsExist)
+        //var ai = await dataService.GetAudioItemAsync(args[0]);
+        IAudioDataSource serviceToUse;
+        if (File.Exists(args[0]))
+            serviceToUse = dataService;
+        else 
+            serviceToUse = ytService;
+        
+        var ai = await serviceToUse.GetAudioItemAsync("https://www.youtube.com/watch?v=3eM6quLZxMg");
+        if (ai is null)
         {
-            Console.WriteLine("Not all files exist");
+            Console.WriteLine("Failed to get audio item");
             return;
         }
-
-        foreach (var mediaFile in args)
+        
+        var couldCache = await ai.CacheAsync();
+        if (!couldCache)
         {
-            var pi = await d.GetPlayItemFromUriAsync(mediaFile);
-            if (pi is null)
-            {
-                Console.WriteLine($"Failed to get playback item for {mediaFile}");
-                continue;
-            }
-
-            var couldCache = await d.CachePlayItemAsync(pi);
-            if (!couldCache)
-            {
-                Console.WriteLine($"Failed to cache {mediaFile}");
-                continue;
-            }
-            
-            var channel = await b.CreateChannelAsync(pi);
-            if (channel is null)
-            {
-                Console.WriteLine($"Failed to create channel for {mediaFile}");
-                continue;
-            }
-
-            channel.Playing += (sender, args) =>
-            {
-                var pi = (IMediaChannel) sender;
-                Console.WriteLine($"Playing {pi.PlaybackItem.Title} by {pi.PlaybackItem.Artist} ({pi.PlaybackItem.Duration})");
-                return ValueTask.CompletedTask;
-            };
-            
-            var tcs = new TaskCompletionSource<bool>();
-            //set true when the channel fires the PlaybackFinished event
-            channel.Ended += (sender, args) =>
-            {
-                tcs.SetResult(true);
-                return ValueTask.CompletedTask;
-            };
-            
-            await channel.PlayAsync();
-            await tcs.Task;
-            await channel.DisposeAsync();
-            await d.RemoveFromCacheAsync(pi);
+            Console.WriteLine("Failed to cache audio item");
+            return;
         }
+        
+        var channel = await audioBackend.CreateChannelAsync(ai);
+        if (channel is null)
+        {
+            Console.WriteLine("Failed to create channel");
+            return;
+        }
+        
+        channel.Ended += async (sender, e) =>
+        {
+            Console.WriteLine("Channel ended");
+            await channel.DisposeAsync();
+            await ai.RemoveFromCacheAsync();
+            Environment.Exit(0);
+        };
+        await channel.PlayAsync();
+        await Task.Delay(-1);
     }
 }

@@ -1,12 +1,12 @@
 ﻿using Manager.Shared.Entities;
 
-namespace Manager.Shared.Interfaces.Subtitle;
+namespace Manager.Shared.Events.Subtitle;
 
 public class SubtitleSlaveAddedEventArgs
 {
-    public PlaybackItem PlaybackItem { get; }
-    public SubtitleSlaveAddedEventArgs(PlaybackItem playbackItem)
+    public SubtitleItem SubtitleItem { get; }
+    public SubtitleSlaveAddedEventArgs(SubtitleItem subtitleItem)
     {
-        this.PlaybackItem = playbackItem;
+        this.SubtitleItem = subtitleItem;
     }
 }

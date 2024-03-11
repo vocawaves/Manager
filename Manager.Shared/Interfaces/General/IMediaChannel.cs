@@ -37,7 +37,7 @@ public interface IMediaChannel : IAsyncDisposable
     #endregion
     
     public IBackendService AssociatedBackend { get; }
-    public PlaybackItem PlaybackItem { get; }
+    public MediaItem MediaItem { get; }
     
     public List<PositionTrigger> PositionTriggers { get; }
 

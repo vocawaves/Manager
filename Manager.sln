@@ -19,6 +19,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Utilities", "Utilities", "{
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MetadataReader.FFMPEG", "MetadataReader.FFMPEG\MetadataReader.FFMPEG.csproj", "{2E6CD4AB-CD46-4DF0-951C-7F817236DABA}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Manager.YouTubeDataService", "Manager.YouTubeDataService\Manager.YouTubeDataService.csproj", "{15E024E2-FC74-4E7E-AD6B-658EC40A91D4}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -45,6 +47,10 @@ Global
 		{2E6CD4AB-CD46-4DF0-951C-7F817236DABA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2E6CD4AB-CD46-4DF0-951C-7F817236DABA}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2E6CD4AB-CD46-4DF0-951C-7F817236DABA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{15E024E2-FC74-4E7E-AD6B-658EC40A91D4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{15E024E2-FC74-4E7E-AD6B-658EC40A91D4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{15E024E2-FC74-4E7E-AD6B-658EC40A91D4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{15E024E2-FC74-4E7E-AD6B-658EC40A91D4}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -56,5 +62,6 @@ Global
 		{E366F1BA-5A28-445B-B158-ECE03745B5B4} = {94BA4DB5-9A97-4539-9156-FD14B3883E0F}
 		{AEE8ECE2-D5F3-4400-BE0A-302B4587ABA6} = {6DD60532-A29E-4D3B-AC9D-6AA9C1405682}
 		{2E6CD4AB-CD46-4DF0-951C-7F817236DABA} = {7C197F80-930E-45A9-98BD-0295D9EEE49F}
+		{15E024E2-FC74-4E7E-AD6B-658EC40A91D4} = {6DD60532-A29E-4D3B-AC9D-6AA9C1405682}
 	EndGlobalSection
 EndGlobal

@@ -4,9 +4,9 @@ namespace Manager.Shared.Events.Audio;
 
 public class ChannelAudioSlaveAddedEventArgs : EventArgs
 {
-    public PlaybackItem AddedItem { get; }
+    public AudioItem AddedItem { get; }
 
-    public ChannelAudioSlaveAddedEventArgs(PlaybackItem addedItem)
+    public ChannelAudioSlaveAddedEventArgs(AudioItem addedItem)
     {
         this.AddedItem = addedItem;
     }

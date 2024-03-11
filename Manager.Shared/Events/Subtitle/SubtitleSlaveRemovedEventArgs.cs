@@ -4,9 +4,9 @@ namespace Manager.Shared.Events.Subtitle;
 
 public class SubtitleSlaveRemovedEventArgs
 {
-    public PlaybackItem PlaybackItem { get; }
-    public SubtitleSlaveRemovedEventArgs(PlaybackItem playbackItem)
+    public SubtitleItem SubtitleItem { get; }
+    public SubtitleSlaveRemovedEventArgs(SubtitleItem subtitleItem)
     {
-        this.PlaybackItem = playbackItem;
+        this.SubtitleItem = subtitleItem;
     }
 }

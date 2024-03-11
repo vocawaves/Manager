@@ -1,14 +1,11 @@
 ﻿using ManagedBass;
 using Manager.Shared.Entities;
-using Manager.Shared.Enums;
 using Manager.Shared.Events.Audio;
 using Manager.Shared.Events.General;
 using Manager.Shared.Helpers;
 using Manager.Shared.Interfaces.Audio;
-using Manager.Shared.Interfaces.Data;
 using Manager.Shared.Interfaces.General;
 using Microsoft.Extensions.Logging;
-using Extensions = Manager.Shared.Helpers.Extensions;
 
 namespace Manager.BassPlayer;
 
@@ -20,7 +17,7 @@ public class BassBackend : IAudioBackendService
     public event AsyncEventHandler<GlobalDefaultVolumeChangedEventArgs>? GlobalVolumeChanged;
     public event AsyncEventHandler<GlobalAudioDeviceChangedEventArgs>? GlobalDeviceChanged;
 
-    public bool Initialized { get; private set; } = false;
+    public bool Initialized { get; private set; }
     public string Name { get; }
     public ulong Parent { get; }
 
@@ -169,61 +166,59 @@ public class BassBackend : IAudioBackendService
         }
     }
 
-    public async ValueTask<IMediaChannel?> CreateChannelAsync(PlaybackItem playbackItem)
+    public async ValueTask<IMediaChannel?> CreateChannelAsync(MediaItem mediaItem)
     {
         if (!this.Initialized)
         {
             this._logger.LogError("BassBackend has not been initialized");
             return default;
         }
-
-        var stream = -1;
-        if (!playbackItem.IsCached)
+        
+        if (mediaItem is not AudioItem audioItem)
         {
-            this._logger.LogError("PlaybackItem has not been cached");
+            this._logger.LogError("MediaItem is not an AudioItem");
             return default;
         }
 
-        //TODO: Implement with new caching system
+        int stream;
+        if (!mediaItem.IsCached)
+        {
+            this._logger.LogError("MediaItem has not been cached");
+            return default;
+        }
+
         try
         {
-            var cacheStream = await playbackItem.GetCachedStreamAsync();
-            switch (cacheStream)
+            var cachePath = await audioItem.GetCachePathAsync();
+            switch (cachePath)
             {
                 case null:
-                    this._logger.LogError("Failed to get cached stream for {playbackItem}", playbackItem);
+                    this._logger.LogError("Failed to get cached stream for {mediaItem}", mediaItem);
                     return default;
-                case MemoryStream ms:
-                    this._logger.LogDebug("Using MemoryStream for {playbackItem}", playbackItem);
-                    stream = Bass.CreateStream(ms.GetBuffer(), 0, ms.Length, BassFlags.Default | BassFlags.Float);
-                    break;
                 default:
                 {
-                    this._logger.LogDebug("Using temporary MemoryStream for {playbackItem}", playbackItem);
-                    using var tempMs = new MemoryStream();
-                    await cacheStream.CopyToAsync(tempMs);
-                    stream = Bass.CreateStream(tempMs.GetBuffer(), 0, tempMs.Length,
+                    this._logger.LogDebug("Using temporary MemoryStream for {mediaItem}", mediaItem);
+                    stream = Bass.CreateStream(cachePath, 0, 0,
                         BassFlags.Default | BassFlags.Float);
-                    await cacheStream.DisposeAsync();
                     break;
                 }
             }
         }
         catch (Exception e)
         {
-            this._logger.LogError(e, "Failed to create stream for {playbackItem}", playbackItem);
+            this._logger.LogError(e, "Failed to create stream for {audioItem}", audioItem);
             return default;
         }
 
         if (stream == 0)
         {
-            this._logger.LogError("Failed to create stream for {playbackItem}: {BassLastError}", playbackItem,
+            this._logger.LogError("Failed to create stream for {audioItem}: {BassLastError}", audioItem,
                 Bass.LastError);
             return default;
         }
 
-        var channel = new BassChannel(this._logFactory.CreateLogger<BassChannel>(), this, playbackItem, stream);
-        this._logger.LogInformation("Created channel for {playbackItem}", playbackItem.OwnerPath);
+        var channel = new BassChannel(this._logFactory.CreateLogger<BassChannel>(), this, audioItem, stream);
+        this._logger.LogInformation("Created channel for {SourcePath}", audioItem.SourcePath);
         return channel;
     }
 }

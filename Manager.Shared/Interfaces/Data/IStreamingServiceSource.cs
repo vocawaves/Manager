@@ -5,7 +5,7 @@ namespace Manager.Shared.Interfaces.Data;
 
 public interface IStreamingServiceSource : IDataService
 {
-    public ValueTask<PlaybackItem[]?> GetPlaylistAsync(string url, int limit = 0);
-    public ValueTask<PlaybackItem[]?> GetAuthorItemsAsync(string url, int limit = 0);
-    public ValueTask<PlaybackItem[]?> SearchAsync(string query, SearchFilter filter = SearchFilter.None);
+    public ValueTask<MediaItem[]?> GetPlaylistAsync(string url, ItemType type, int limit = 0);
+    public ValueTask<MediaItem[]?> GetAuthorItemsAsync(string url, ItemType itemType, int limit = 0);
+    public ValueTask<MediaItem[]?> SearchAsync(string query, ItemType itemType, SearchFilter filter = SearchFilter.None);
 }
