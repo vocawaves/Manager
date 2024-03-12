@@ -1,4 +1,5 @@
 ﻿using Manager.Shared.Interfaces.Data;
+using Microsoft.Extensions.Logging;
 
 namespace Manager.Shared.Entities;
 
@@ -9,8 +10,8 @@ public class SubtitleItem : MediaItem
 
     public TimeSpan Duration { get; }
 
-    public SubtitleItem(IDataService dataService, ulong id, string sourcePath, string pathTitle, string name,
-        string? language, TimeSpan duration) : base(dataService, id, sourcePath, pathTitle)
+    public SubtitleItem(ILoggerFactory lf, IDataService dataService, ulong id, string sourcePath, string pathTitle, string name,
+        string? language, TimeSpan duration) : base(lf, dataService, id, sourcePath, pathTitle)
     {
         this.Name = name;
         this.Language = language;

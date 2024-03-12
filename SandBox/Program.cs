@@ -36,6 +36,17 @@ internal class Program
                 Console.WriteLine("Failed to get audio item");
                 return;
             }
+            
+            ai.CacheStateChanged += (sender, args) =>
+            {
+                logger.LogInformation("Cache state changed to {State}", args.State);
+                return ValueTask.CompletedTask;
+            };
+            ai.CacheProgressChanged += (sender, args) =>
+            {
+                logger.LogInformation("Cache progress changed to {Progress}", args.Progress);
+                return ValueTask.CompletedTask;
+            };
         
             var couldCache = await ai.CacheAsync();
             if (!couldCache)
@@ -59,12 +70,15 @@ internal class Program
                 tcs.SetResult(true);
                 return ValueTask.CompletedTask;
             };
+            var playTime = Stopwatch.GetTimestamp();
             await channel.PlayAsync();
             var endTime = Stopwatch.GetTimestamp();
             var timeSpent = TimeSpan.FromTicks(endTime - startTime);
             var timeSpentCreate = TimeSpan.FromTicks(endTime - chanCreation);
+            var timeSpentPlay = TimeSpan.FromTicks(endTime - playTime);
             logger.LogInformation("Time spent getting track ready and playing: {TimeSpent}", timeSpent);
             logger.LogInformation("Time spent creating channel and playing: {TimeSpentCreate}", timeSpentCreate);
+            logger.LogInformation("Time spent playing: {TimeSpentPlay}", timeSpentPlay);
             await tcs.Task;
             await channel.DisposeAsync();
             await ai.DisposeAsync();

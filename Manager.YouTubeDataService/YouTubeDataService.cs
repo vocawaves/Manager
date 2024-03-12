@@ -26,9 +26,11 @@ public class YouTubeDataService : IStreamingServiceSource, IAudioDataSource, IVi
     private readonly ICacheStrategy _cacheStrategy;
     private readonly YoutubeClient _youtubeClient;
     private readonly HttpClient _httpClient;
+    private readonly ILoggerFactory _loggerFactory;
 
     public YouTubeDataService(ILoggerFactory lf, string name, ulong parent)
     {
+        _loggerFactory = lf;
         _cacheStrategy = new BasicCacheStrategy(lf);
         _logger = lf.CreateLogger<YouTubeDataService>();
         Name = name;
@@ -52,7 +54,7 @@ public class YouTubeDataService : IStreamingServiceSource, IAudioDataSource, IVi
         var thumbnailUrl = video.Thumbnails.GetWithHighestResolution();
         var thumbnailData = await _httpClient.GetByteArrayAsync(thumbnailUrl.Url);
         var thumbnailMimeType = MimeGuesser.GuessMimeType(thumbnailData);
-        var audioItem = new AudioItem(this, Parent, uri, videoId, video.Title, video.Author.ChannelTitle,
+        var audioItem = new AudioItem(this._loggerFactory, this, Parent, uri, videoId, video.Title, video.Author.ChannelTitle,
             video.Duration ?? TimeSpan.Zero, thumbnailData, thumbnailMimeType);
         return audioItem;
     }
@@ -104,6 +106,7 @@ public class YouTubeDataService : IStreamingServiceSource, IAudioDataSource, IVi
 
     public async ValueTask<bool> CachePlayItemAsync(MediaItem item)
     {
+        item.SetCacheState(CacheState.Caching);
         IStreamInfo streamInfo;
         var manifest = await _youtubeClient.Videos.Streams.GetManifestAsync(item.SourcePath);
         this._logger.LogDebug("Got manifest for {PathTitle}", item.PathTitle);
@@ -120,6 +123,8 @@ public class YouTubeDataService : IStreamingServiceSource, IAudioDataSource, IVi
                     streamInfo.Size);
                 break;
             default:
+                this._logger.LogError("Unknown item type {ItemType}", item.GetType().Name);
+                item.SetCacheState(CacheState.Failed);
                 return false;
         }
         
@@ -127,7 +132,7 @@ public class YouTubeDataService : IStreamingServiceSource, IAudioDataSource, IVi
         _logger.LogInformation("Caching {PathTitle} to MemoryStream", item.PathTitle);
         await _youtubeClient.Videos.Streams.CopyToAsync(streamInfo, ms, new Progress<double>((progress) =>
         {
-            this._logger.LogDebug("Progress for {PathTitle}: {Progress}", item.PathTitle, progress);
+            item.SetCacheProgress(progress * 100);
         }));
         this._logger.LogInformation("{PathTitle} has been cached to MemoryStream", item.PathTitle);
         var mimeType = MimeGuesser.GuessMimeType(ms.GetBuffer()); 
@@ -140,7 +145,7 @@ public class YouTubeDataService : IStreamingServiceSource, IAudioDataSource, IVi
         };
         var cacheName = $"{item.OwnerId}_{item.PathTitle}.{cacheNameExtension}";
         this._logger.LogDebug("Saving {PathTitle} to {CacheName}", item.PathTitle, cacheName);
-        return await _cacheStrategy.CacheAsync(item, ms.GetBuffer(), cacheName);
+        return await _cacheStrategy.CacheAsync(item, ms, cacheName);
     }
 
     public ValueTask<bool> RemoveFromCacheAsync(MediaItem item)

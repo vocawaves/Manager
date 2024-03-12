@@ -1,4 +1,5 @@
 ﻿using Manager.Shared.Interfaces.Data;
+using Microsoft.Extensions.Logging;
 
 namespace Manager.Shared.Entities;
 
@@ -9,20 +10,20 @@ public class AudioItem : MediaItem
 
     public TimeSpan Duration { get; }
 
-    public byte[]? AlbumArt { get; }
+    public byte[]? AlbumArt { get; private set; }
     public string? AlbumArtMimeType { get; }
     
 
-    public AudioItem(IDataService dataService, ulong ownerId, string sourcePath, string pathTitle, string title,
-        string artist, TimeSpan duration) : base(dataService, ownerId, sourcePath, pathTitle)
+    public AudioItem(ILoggerFactory lf, IDataService dataService, ulong ownerId, string sourcePath, string pathTitle, string title,
+        string artist, TimeSpan duration) : base(lf, dataService, ownerId, sourcePath, pathTitle)
     {
         Title = title;
         Artist = artist;
         Duration = duration;
     }
 
-    public AudioItem(IDataService dataService, ulong ownerId, string sourcePath, string pathTitle, string title,
-        string artist, TimeSpan duration, byte[] albumArt, string albumArtMimeType) : base(dataService, ownerId,
+    public AudioItem(ILoggerFactory lf, IDataService dataService, ulong ownerId, string sourcePath, string pathTitle, string title,
+        string artist, TimeSpan duration, byte[] albumArt, string albumArtMimeType) : base(lf, dataService, ownerId,
         sourcePath, pathTitle)
     {
         Title = title;
@@ -30,11 +31,5 @@ public class AudioItem : MediaItem
         Duration = duration;
         AlbumArt = albumArt;
         AlbumArtMimeType = albumArtMimeType;
-    }
-    
-    public override async ValueTask DisposeAsync()
-    {
-        if (this.IsCached)
-            await this.RemoveFromCacheAsync();
     }
 }

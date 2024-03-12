@@ -1,4 +1,5 @@
 ﻿using Manager.Shared.Entities;
+using Manager.Shared.Enums;
 using Manager.Shared.Interfaces.Data;
 using Microsoft.Extensions.Logging;
 
@@ -8,8 +9,7 @@ public class BasicCacheStrategy : ICacheStrategy
 {
     private readonly string _cacheDirectory;
     
-    private Dictionary<MediaItem, string> _cachedItems = new();
-    
+    private readonly Dictionary<MediaItem, string> _cachedItems = new();
     private readonly ILogger<BasicCacheStrategy> _logger;
 
     public BasicCacheStrategy(ILoggerFactory lf)
@@ -29,9 +29,20 @@ public class BasicCacheStrategy : ICacheStrategy
         this._logger.LogDebug("Caching {PathTitle} to {CachePath}", mediaItem.PathTitle, cachePath);
         try
         {
-            await File.WriteAllBytesAsync(cachePath, data);
+            await using var fs = File.Create(cachePath);
+            //write in 1MB chunks (or less if last chunk)
+            for (int i = 0; i < data.Length; i += 1024 * 1024)
+            {
+                int length = Math.Min(1024 * 1024, data.Length - i);
+                await fs.WriteAsync(data, i, length);
+                double progress = (double)i / data.Length * 100;
+                mediaItem.SetCacheProgress(progress);
+            }
+            
             this._cachedItems.Add(mediaItem, cachePath);
-            mediaItem.IsCached = true;
+            if (mediaItem.CacheProgress < 100)
+                mediaItem.SetCacheProgress(100);
+            mediaItem.SetCacheState(CacheState.Cached);
             return true;
         }
         catch (Exception e)
@@ -48,12 +59,26 @@ public class BasicCacheStrategy : ICacheStrategy
         
         var cachePath = Path.Combine(_cacheDirectory, cacheName);
         this._logger.LogDebug("Caching {PathTitle} to {CachePath}", mediaItem.PathTitle, cachePath);
-        await using var fs = File.Create(cachePath);
         try
         {
-            await data.CopyToAsync(fs);
+            await using var fs = File.Create(cachePath);
+            //try to seek to the beginning of the stream
+            if (data.CanSeek)
+                data.Seek(0, SeekOrigin.Begin);
+            
+            //write in 1MB chunks (or less if last chunk)
+            var buffer = new byte[1024 * 1024];
+            int bytesRead;
+            while ((bytesRead = await data.ReadAsync(buffer, 0, buffer.Length)) > 0)
+            {
+                await fs.WriteAsync(buffer, 0, bytesRead);
+                double progress = (double)data.Position / data.Length * 100;
+                mediaItem.SetCacheProgress(progress);
+            }
             this._cachedItems.Add(mediaItem, cachePath);
-            mediaItem.IsCached = true;
+            if (mediaItem.CacheProgress < 100)
+                mediaItem.SetCacheProgress(100);
+            mediaItem.SetCacheState(CacheState.Cached);
             return true;
         }
         catch (Exception e)
@@ -63,24 +88,36 @@ public class BasicCacheStrategy : ICacheStrategy
         }
     }
 
-    public ValueTask<bool> CacheAsync(MediaItem mediaItem, string path, string cacheName)
+    public async ValueTask<bool> CacheAsync(MediaItem mediaItem, string path, string cacheName)
     {
         if (this._cachedItems.ContainsKey(mediaItem))
-            return ValueTask.FromResult(true);
+            return true;
         
         var cachePath = Path.Combine(_cacheDirectory, cacheName);
         this._logger.LogDebug("Caching {PathTitle} to {CachePath}", mediaItem.PathTitle, cachePath);
         try
         {
-            File.Copy(path, cachePath, true);
+            //File.Copy(path, cachePath, true);
+            using var source = File.OpenRead(path);
+            using var destination = File.Create(cachePath);
+            //write in 1MB chunks (or less if last chunk)
+            var buffer = new byte[1024 * 1024];
+            int bytesRead;
+            while ((bytesRead = source.Read(buffer, 0, buffer.Length)) > 0)
+            {
+                await destination.WriteAsync(buffer, 0, bytesRead);
+                double progress = (double)source.Position / source.Length * 100;
+                mediaItem.SetCacheProgress(progress);
+            }
             this._cachedItems.Add(mediaItem, cachePath);
-            mediaItem.IsCached = true;
-            return ValueTask.FromResult(true);
+            mediaItem.SetCacheState(CacheState.Cached);
+            return true;
         }
         catch (Exception e)
         {
             this._logger.LogError(e, "Failed to cache {PathTitle} to {CachePath}", mediaItem.PathTitle, cachePath);
-            return ValueTask.FromResult(false);
+            mediaItem.SetCacheState(CacheState.Failed);
+            return false;
         }
     }
 
@@ -95,6 +132,8 @@ public class BasicCacheStrategy : ICacheStrategy
         {
             File.Delete(path);
             this._cachedItems.Remove(mediaItem);
+            mediaItem.SetCacheProgress(0);
+            mediaItem.SetCacheState(CacheState.NotCached);
             return ValueTask.FromResult(true);
         }
         catch (Exception e)

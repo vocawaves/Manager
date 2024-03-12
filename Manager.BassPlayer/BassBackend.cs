@@ -1,5 +1,6 @@
 ﻿using ManagedBass;
 using Manager.Shared.Entities;
+using Manager.Shared.Enums;
 using Manager.Shared.Events.Audio;
 using Manager.Shared.Events.General;
 using Manager.Shared.Helpers;
@@ -181,7 +182,7 @@ public class BassBackend : IAudioBackendService
         }
 
         int stream;
-        if (!mediaItem.IsCached)
+        if (mediaItem.CacheState != CacheState.Cached)
         {
             this._logger.LogError("MediaItem has not been cached");
             return default;

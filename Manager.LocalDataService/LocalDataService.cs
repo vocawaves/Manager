@@ -1,6 +1,7 @@
 ﻿using HeyRed.Mime;
 using Manager.Shared.Cache;
 using Manager.Shared.Entities;
+using Manager.Shared.Enums;
 using Manager.Shared.Events.General;
 using Manager.Shared.Helpers;
 using Manager.Shared.Interfaces.Data;
@@ -23,9 +24,11 @@ public class LocalDataService : IFileSystemSource, IAudioDataSource, IVideoDataS
 
     private readonly ILogger<LocalDataService> _logger;
     private readonly ICacheStrategy _cacheStrategy;
+    private readonly ILoggerFactory _loggerFactory;
 
     public LocalDataService(ILoggerFactory lf, string name, ulong parent, string mountName)
     {
+        _loggerFactory = lf;
         _cacheStrategy = new BasicCacheStrategy(lf);
         _logger = lf.CreateLogger<LocalDataService>();
         Name = name;
@@ -82,7 +85,7 @@ public class LocalDataService : IFileSystemSource, IAudioDataSource, IVideoDataS
         if (albumArt is null)
         {
             _logger.LogInformation("No album art found for {0}", uri);
-            return new AudioItem(this, Parent, uri, Path.GetFileName(uri), title, artist, duration)
+            return new AudioItem(this._loggerFactory, this, Parent, uri, Path.GetFileName(uri), title, artist, duration)
             {
                 MimeType = mimeType,
                 Metadata = metadata
@@ -90,7 +93,7 @@ public class LocalDataService : IFileSystemSource, IAudioDataSource, IVideoDataS
         }
         
         var albumArtMimeType = MimeGuesser.GuessMimeType(albumArt);
-        return new AudioItem(this, Parent, uri, Path.GetFileName(uri), title, artist, duration, albumArt, albumArtMimeType)
+        return new AudioItem(this._loggerFactory, this, Parent, uri, Path.GetFileName(uri), title, artist, duration, albumArt, albumArtMimeType)
         {
             MimeType = mimeType,
             Metadata = metadata
@@ -144,9 +147,15 @@ public class LocalDataService : IFileSystemSource, IAudioDataSource, IVideoDataS
 
     public async ValueTask<bool> CachePlayItemAsync(MediaItem item)
     {
-        if (item.IsCached)
+        if (item.CacheState == CacheState.Cached)
         {
             _logger.LogInformation("Item {0} is already cached", item.SourcePath);
+            return true;
+        }
+        
+        if (item.CacheState == CacheState.Caching)
+        {
+            _logger.LogInformation("Item {0} is already being cached", item.SourcePath);
             return true;
         }
         
@@ -165,6 +174,7 @@ public class LocalDataService : IFileSystemSource, IAudioDataSource, IVideoDataS
             _ => "mcig"
         };
         
+        item.SetCacheState(CacheState.Caching);
         var cacheName = $"{item.OwnerId}_{item.PathTitle}.{itemCacheExtension}";
         return await this._cacheStrategy.CacheAsync(item, item.SourcePath, cacheName);
     }
