@@ -120,9 +120,16 @@ public class BassChannel : IAudioChannel
     public ValueTask<bool> StopAsync()
     {
         var success = Bass.ChannelStop(_bassChannel);
+        var resetPos = Bass.ChannelSetPosition(_bassChannel, 0);
         if (!success)
         {
             this._logger.LogError("Failed to stop channel {channel}: {BassLastError}", _bassChannel, Bass.LastError);
+            return ValueTask.FromResult(false);
+        }
+        if (!resetPos)
+        {
+            this._logger.LogError("Failed to reset position for channel {channel}: {BassLastError}", _bassChannel,
+                Bass.LastError);
             return ValueTask.FromResult(false);
         }
         

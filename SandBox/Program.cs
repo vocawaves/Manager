@@ -20,6 +20,54 @@ internal class Program
         var ytService = new YouTubeDataService(lf, "YouTube", 0);
         var audioBackend = new BassBackend(lf, "Bass", 0);
         await audioBackend.InitializeAsync();
+
+        var itm = await ytService.GetAudioItemAsync("https://www.youtube.com/watch?v=D5FiNo8CRvM");
+        if (itm is null)
+        {
+            logger.LogError("Failed to get audio item");
+            return;
+        }
+        
+        var cached = await itm.CacheAsync();
+        if (!cached)
+        {
+            logger.LogError("Failed to cache audio item");
+            return;
+        }
+        
+        var chan1 = await audioBackend.CreateChannelAsync(itm);
+        if (chan1 is null)
+        {
+            logger.LogError("Failed to create channel");
+            return;
+        }
+        var chan2 = await audioBackend.CreateChannelAsync(itm);
+        if (chan2 is null)
+        {
+            logger.LogError("Failed to create channel");
+            return;
+        }
+        
+        var tcs1 = new TaskCompletionSource<bool>();
+        var tcs2 = new TaskCompletionSource<bool>();
+        chan1.Ended += (sender, _) =>
+        {
+            tcs1.SetResult(true);
+            return ValueTask.CompletedTask;
+        };
+        chan2.Ended += (sender, _) =>
+        {
+            tcs2.SetResult(true);
+            return ValueTask.CompletedTask;
+        };
+        await chan1.PlayAsync();
+        await Task.Delay(1000);
+        await chan1.StopAsync();
+        await chan1.PlayAsync();
+        await chan2.PlayAsync();
+        await Task.WhenAll(tcs1.Task, tcs2.Task);
+        
+        return;
         
         foreach (var arg in args)
         {
