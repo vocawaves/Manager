@@ -3,11 +3,23 @@ using Manager.Shared.Interfaces.Audio;
 
 namespace Manager.Shared.Entities;
 
+/// <summary>
+/// A standardized wrapper for audio devices.
+/// </summary>
 public class AudioDevice
 {
-    public IAudioBackendService AssociatedBackend { get; private set; }
-    public string Name { get; private set; }
-    public string Id { get; private set; }
+    /// <summary>
+    /// The backend service that this device is associated with.
+    /// </summary>
+    public IAudioBackendService AssociatedBackend { get; }
+    /// <summary>
+    /// The name of the audio device. (or how it is displayed in the backend)
+    /// </summary>
+    public string Name { get; }
+    /// <summary>
+    /// A unique identifier for the audio device.
+    /// </summary>
+    public string Id { get; }
     
     public AudioDevice(IAudioBackendService backend, string name, string id)
     {

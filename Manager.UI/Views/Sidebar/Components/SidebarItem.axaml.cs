@@ -2,11 +2,11 @@
 using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
 
-namespace Manager.UI.Data.Controls;
+namespace Manager.UI.Views.Sidebar.Components;
 
-public partial class LocalDataView : UserControl
+public partial class SidebarItem : UserControl
 {
-    public LocalDataView()
+    public SidebarItem()
     {
         InitializeComponent();
     }

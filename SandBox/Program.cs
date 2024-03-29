@@ -16,7 +16,7 @@ internal class Program
         
         var logger = lf.CreateLogger<Program>();
         
-        var dataService = new LocalDataService(lf, "Basic", 0, "C:\\");
+        var dataService = new LocalDataService(lf, "Basic", 0);
         var ytService = new YouTubeDataService(lf, "YouTube", 0);
         var audioBackend = new BassBackend(lf, "Bass", 0);
         await audioBackend.InitializeAsync();

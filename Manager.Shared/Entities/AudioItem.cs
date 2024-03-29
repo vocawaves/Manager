@@ -3,14 +3,32 @@ using Microsoft.Extensions.Logging;
 
 namespace Manager.Shared.Entities;
 
+/// <summary>
+/// An extension of <see cref="MediaItem"/> that represents an audio item.
+/// </summary>
 public class AudioItem : MediaItem
 {
+    /// <summary>
+    /// Title of the audio item.
+    /// </summary>
     public string? Title { get; }
+    /// <summary>
+    /// Artist of the audio item.
+    /// </summary>
     public string? Artist { get; }
 
+    /// <summary>
+    /// Duration of the audio item.
+    /// </summary>
     public TimeSpan Duration { get; }
 
+    /// <summary>
+    /// Album art in bytes. (if available)
+    /// </summary>
     public byte[]? AlbumArt { get; private set; }
+    /// <summary>
+    /// Mime type of the album art. (if available)
+    /// </summary>
     public string? AlbumArtMimeType { get; }
     
 

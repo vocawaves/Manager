@@ -15,6 +15,7 @@
     <PackageReference Include="Avalonia" Version="11.1.0-beta1" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="11.1.0-beta1" />
     <PackageReference Include="Avalonia.Fonts.Inter" Version="11.1.0-beta1" />
+    <PackageReference Include="Avalonia.Themes.Simple" Version="11.1.0-beta1" />
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2" />
 
     <!--Condition below is needed to remove Avalonia.Diagnostics package from build output in Release configuration.-->
@@ -22,6 +23,13 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Manager.LocalDataService\Manager.LocalDataService.csproj" />
     <ProjectReference Include="..\Manager.Shared\Manager.Shared.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Models\Data\" />
+    <Folder Include="ViewModels\Data\" />
+    <Folder Include="Views\Data\Components\" />
   </ItemGroup>
 </Project>

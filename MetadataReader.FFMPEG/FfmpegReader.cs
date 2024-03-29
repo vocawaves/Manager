@@ -9,6 +9,10 @@ namespace MetadataReader.FFMPEG;
 
 public class FfmpegReader
 {
+    
+    /// <summary>
+    /// Get all metadata tags from media from a file path
+    /// </summary>
     public static Dictionary<string, string> ReadMetaDataTags(string path)
     {
         var dict = new Dictionary<string, string>();
@@ -26,6 +30,9 @@ public class FfmpegReader
         return dict;
     }
 
+    /// <summary>
+    /// Get all metadata tags from media from a byte array
+    /// </summary>
     public static Dictionary<string, string> ReadMetaDataTags(byte[] data)
     {
         var dict = new Dictionary<string, string>();
@@ -45,6 +52,9 @@ public class FfmpegReader
         return dict;
     }
     
+    /// <summary>
+    /// Get the duration of a media file
+    /// </summary>
     public static TimeSpan GetDuration(string path)
     {
         using var fCtx = FormatContext.OpenInputUrl(path);
@@ -58,8 +68,6 @@ public class FfmpegReader
         {
             return TimeSpan.FromMicroseconds(fCtx.Duration);
         }
-
-        NativeLibrary.Free(IntPtr.Zero);
         
         if (fCtx.Streams.All(s => s.Duration <= 0))
             return TimeSpan.Zero;
@@ -71,7 +79,13 @@ public class FfmpegReader
         var durationInSeconds = duration * timeBase;
         return TimeSpan.FromSeconds(durationInSeconds);
     }
+    
+    //TODO: Add a method to get the duration from a byte array
+    //Probably didnt do that cause with YouTube videos its always included in the metadata
 
+    /// <summary>
+    /// Try to read cover art from an audio files IDv3 tags or from the same directory
+    /// </summary>
     public static async Task<byte[]?> TryReadCoverArt(string path)
     {
         try
@@ -90,6 +104,9 @@ public class FfmpegReader
         return null;
     }
 
+    /// <summary>
+    /// Try to read cover art from an audio files IDv3 tags
+    /// </summary>
     public static async Task<byte[]?> TryReadCoverArt(byte[] data)
     {
         try
@@ -106,18 +123,27 @@ public class FfmpegReader
         return null;
     }
 
+    /// <summary>
+    /// Get a thumbnail from a video file
+    /// </summary>
     public static bool TryGetVideoThumbnail(string path, out byte[] thumbnail)
     {
         using var fs = File.OpenRead(path);
         return TryGetVideoThumbnailInternal(fs, out thumbnail);
     }
 
+    /// <summary>
+    /// Get a thumbnail from a video byte array
+    /// </summary>
     public static bool TryGetVideoThumbnail(byte[] data, out byte[] thumbnail)
     {
         using var ms = new MemoryStream(data);
         return TryGetVideoThumbnailInternal(ms, out thumbnail);
     }
 
+    /// <summary>
+    /// Seeks to 50% of the video and tries to get a thumbnail, gets converted to PNG
+    /// </summary>
     private static bool TryGetVideoThumbnailInternal(Stream dataStream, out byte[] thumbnail)
     {
         thumbnail = Array.Empty<byte>();
@@ -180,6 +206,10 @@ public class FfmpegReader
         
         return true;
     }
+    
+    /// <summary>
+    /// Try to read cover art from the IDv3 tags
+    /// </summary>
     private static bool TryReadCoverArtNative(Stream data, out byte[]? coverArt)
     {
         coverArt = Array.Empty<byte>();
@@ -229,6 +259,11 @@ public class FfmpegReader
 
         return false;
     }
+    
+    /// <summary>
+    /// Try to find cover art in the same directory as the file
+    /// Partially Copilot code, could be cleaned up a bit
+    /// </summary>
     private static async Task<byte[]?> TryFindCoverArt(string path)
     {
         try

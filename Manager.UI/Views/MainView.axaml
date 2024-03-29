@@ -12,25 +12,14 @@
         <vm:MainViewModel />
     </Design.DataContext>
 
-    <TabControl TabStripPlacement="Left"
-                SelectedIndex="3">
-        <TabControl.Items>
-            <TabItem Header="Dash"></TabItem>
-            <TabItem Header="ActQ"></TabItem>
-            <TabItem Header="QRepo"></TabItem>
-            <TabItem Header="Data">
-                <Grid ColumnDefinitions="*,*"
-                      RowDefinitions="Auto,*"
-                      ShowGridLines="True"
-                      Background="#82994339">
-                    <TabStrip Grid.Column="0"
-                              Grid.Row="0"/>
-                    <ContentControl Grid.Column="0"
-                                    Grid.Row="1"
-                                    Content="{Binding ActiveDataView}"/>
-                </Grid>
-            </TabItem>
-        </TabControl.Items>
-    </TabControl>
+    <Grid ShowGridLines="True" ColumnDefinitions="Auto, *">
+        <TabStrip Grid.Column="0">
+            <TabStrip.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <StackPanel/>
+                </ItemsPanelTemplate>
+            </TabStrip.ItemsPanel>
+        </TabStrip>
+    </Grid>
 
 </UserControl>

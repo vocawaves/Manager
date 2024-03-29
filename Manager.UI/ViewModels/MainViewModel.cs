@@ -1,10 +1,11 @@
-﻿using Avalonia.Controls;
-using CommunityToolkit.Mvvm.ComponentModel;
+﻿using Microsoft.Extensions.Logging;
 
 namespace Manager.UI.ViewModels;
 
 public partial class MainViewModel : ViewModelBase
-{
-    [ObservableProperty]
-    private UserControl? _activeDataView;
+{    
+    public MainViewModel()
+    {
+        var lf = new LoggerFactory();
+    }
 }

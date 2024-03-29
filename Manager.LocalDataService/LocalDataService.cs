@@ -20,47 +20,72 @@ public class LocalDataService : IFileSystemSource, IAudioDataSource, IVideoDataS
     public string Name { get; }
     public ulong Parent { get; }
 
-    public string MountName { get; }
 
     private readonly ILogger<LocalDataService> _logger;
     private readonly ICacheStrategy _cacheStrategy;
     private readonly ILoggerFactory _loggerFactory;
 
-    public LocalDataService(ILoggerFactory lf, string name, ulong parent, string mountName)
+    public LocalDataService(ILoggerFactory lf, string name, ulong parent)
     {
         _loggerFactory = lf;
         _cacheStrategy = new BasicCacheStrategy(lf);
         _logger = lf.CreateLogger<LocalDataService>();
         Name = name;
         Parent = parent;
-        MountName = mountName;
     }
 
     public ValueTask<bool> InitializeAsync(params string[] options)
     {
         return ValueTask.FromResult(true);
     }
-
-    public ValueTask<FileItem[]> GetFilesAsync(DirectoryItem? item = null, params string[] extensions)
+    
+    public ValueTask<DirectoryItem[]> GetMountPointsAsync()
     {
-        var dir = item?.FullPath ?? MountName;
-        var files = Directory.GetFiles(dir);
-        var fileItems = new FileItem[files.Length];
-        for (var i = 0; i < files.Length; i++)
-            fileItems[i] = new FileItem(Path.GetFileName(files[i]), files[i]);
-
-        return ValueTask.FromResult(fileItems);
+        var drives = DriveInfo.GetDrives();
+        var items = new DirectoryItem[drives.Length];
+        for (var i = 0; i < drives.Length; i++)
+        {
+            var drive = drives[i];
+            items[i] = new DirectoryItem($"({drive.Name}) {drive.VolumeLabel}", drive.Name);
+        }
+        return ValueTask.FromResult(items);
     }
 
-    public ValueTask<DirectoryItem[]> GetDirectoriesAsync(string? path = null)
+    public ValueTask<FileItem[]> GetFilesAsync(string uri, params string[] extensions)
     {
-        var dir = path ?? MountName;
-        var dirs = Directory.GetDirectories(dir);
-        var dirItems = new DirectoryItem[dirs.Length];
-        for (var i = 0; i < dirs.Length; i++)
-            dirItems[i] = new DirectoryItem(Path.GetFileName(dirs[i]), dirs[i]);
+        if (!Directory.Exists(uri))
+        {
+            _logger.LogError("Directory not found: {0}", uri);
+            return ValueTask.FromResult(Array.Empty<FileItem>());
+        }
 
-        return ValueTask.FromResult(dirItems);
+        var files = Directory.GetFiles(uri);
+        var items = new FileItem[files.Length];
+        for (var i = 0; i < files.Length; i++)
+        {
+            var file = files[i];
+            items[i] = new FileItem(Path.GetFileName(file), file);
+        }
+        return ValueTask.FromResult(items);
+    }
+
+    public ValueTask<DirectoryItem[]> GetDirectoriesAsync(string uri)
+    {
+        if (!Directory.Exists(uri))
+        {
+            _logger.LogError("Directory not found: {0}", uri);
+            return ValueTask.FromResult(Array.Empty<DirectoryItem>());
+        }
+
+        var directories = Directory.GetDirectories(uri);
+        var items = new DirectoryItem[directories.Length];
+        for (var i = 0; i < directories.Length; i++)
+        {
+            var directory = directories[i];
+            var dirInfo = new DirectoryInfo(directory);
+            items[i] = new DirectoryItem(dirInfo.Name, directory);
+        }
+        return ValueTask.FromResult(items);
     }
 
     public async ValueTask<AudioItem?> GetAudioItemAsync(string uri)
