@@ -55,7 +55,7 @@ public class MediaItem : IAsyncDisposable
     /// Display title of the media item. Custom title if available, otherwise path title.
     /// Might be used in UI. Should maybe be moved to a view model.
     /// </summary>
-    public string DisplayTitle => CustomTitle ?? PathTitle;
+    public virtual string DisplayTitle => CustomTitle ?? PathTitle;
     
     /// <summary>
     /// Mime type of the media item.

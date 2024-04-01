@@ -198,7 +198,7 @@ public class LocalDataService : IFileSystemSource, IAudioDataSource, IVideoDataS
             ImageItem => "mcii",
             _ => "mcig"
         };
-        
+
         item.SetCacheState(CacheState.Caching);
         var cacheName = $"{item.OwnerId}_{item.PathTitle}.{itemCacheExtension}";
         return await this._cacheStrategy.CacheAsync(item, item.SourcePath, cacheName);

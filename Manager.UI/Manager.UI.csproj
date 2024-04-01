@@ -25,11 +25,10 @@
   <ItemGroup>
     <ProjectReference Include="..\Manager.LocalDataService\Manager.LocalDataService.csproj" />
     <ProjectReference Include="..\Manager.Shared\Manager.Shared.csproj" />
+    <ProjectReference Include="..\Manager.YouTubeDataService\Manager.YouTubeDataService.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <Folder Include="Models\Data\" />
-    <Folder Include="ViewModels\Data\" />
-    <Folder Include="Views\Data\Components\" />
   </ItemGroup>
 </Project>

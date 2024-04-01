@@ -1,0 +1,265 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:components="clr-namespace:Manager.UI.ViewModels.Data.Components"
+             xmlns:entities="clr-namespace:Manager.Shared.Entities;assembly=Manager.Shared"
+             xmlns:converters="clr-namespace:Manager.UI.Converters"
+             mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="300"
+             x:Class="Manager.UI.Views.Data.Components.CacheItemView"
+             x:DataType="components:CacheItemViewModel">
+    <Design.DataContext>
+        <components:CacheItemViewModel />
+    </Design.DataContext>
+
+    <UserControl.Resources>
+        <converters:ByteArrayToBitmapConverter x:Key="ByteArrayToBitmapConverter" />
+        <converters:MediaItemToTypeNameConverter x:Key="MediaItemToTypeNameConverter" />
+        <converters:MediaItemToColorConverter x:Key="MediaItemToColorConverter" />
+
+        <StreamGeometry x:Key="CheckmarkCircleRegular">M24,4 C35.045695,4 44,12.954305 44,24 C44,35.045695 35.045695,44 24,44 C12.954305,44 4,35.045695 4,24 C4,12.954305 12.954305,4 24,4 Z M24,6.5 C14.3350169,6.5 6.5,14.3350169 6.5,24 C6.5,33.6649831 14.3350169,41.5 24,41.5 C33.6649831,41.5 41.5,33.6649831 41.5,24 C41.5,14.3350169 33.6649831,6.5 24,6.5 Z M32.6338835,17.6161165 C33.1220388,18.1042719 33.1220388,18.8957281 32.6338835,19.3838835 L21.6338835,30.3838835 C21.1457281,30.8720388 20.3542719,30.8720388 19.8661165,30.3838835 L15.3661165,25.8838835 C14.8779612,25.3957281 14.8779612,24.6042719 15.3661165,24.1161165 C15.8542719,23.6279612 16.6457281,23.6279612 17.1338835,24.1161165 L20.75,27.732233 L30.8661165,17.6161165 C31.3542719,17.1279612 32.1457281,17.1279612 32.6338835,17.6161165 Z</StreamGeometry>
+        <StreamGeometry x:Key="CircleRegular">M12 3.5C7.30558 3.5 3.5 7.30558 3.5 12C3.5 16.6944 7.30558 20.5 12 20.5C16.6944 20.5 20.5 16.6944 20.5 12C20.5 7.30558 16.6944 3.5 12 3.5ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12Z</StreamGeometry>
+    </UserControl.Resources>
+
+    <Expander Margin="5"
+              HorizontalAlignment="Stretch"
+              HorizontalContentAlignment="Stretch"
+              VerticalContentAlignment="Stretch"
+              Content="{Binding BackingMediaItem}">
+
+        <Expander.Header>
+            <Grid ColumnDefinitions="Auto, Auto, 100, Auto, 100, 100, Auto, *, 100, Auto, 100"
+                  RowDefinitions="Auto, Auto"
+                  HorizontalAlignment="Stretch"
+                  VerticalAlignment="Center">
+                
+                <CheckBox Grid.Column="0"
+                          Grid.Row="0"
+                          Grid.RowSpan="2"
+                          VerticalAlignment="Center" />
+
+                <Separator Grid.Column="1"
+                           Grid.Row="0"
+                           Grid.RowSpan="2"
+                           VerticalAlignment="Center"
+                           Margin="5,0"
+                           Height="25"
+                           Width="2" />
+
+                <TextBlock Grid.Column="2"
+                           Grid.Row="0"
+                           Margin="5"
+                           VerticalAlignment="Center"
+                           HorizontalAlignment="Center"
+                           FontWeight="Bold"
+                           FontSize="20"
+                           TextAlignment="Center"
+                           Text="{Binding BackingMediaItem, Converter={StaticResource MediaItemToTypeNameConverter}}" />
+                       <!--Foreground="{Binding BackingMediaItem, Converter={StaticResource MediaItemToColorConverter}}"-->
+                
+                <ProgressBar Grid.Column="2"
+                             Grid.Row="1"
+                             Grid.ColumnSpan="8"
+                             Margin="5,0"
+                             VerticalAlignment="Center"
+                             Padding="0"
+                             Value="{Binding CacheProgress}"/>
+                
+                <Separator Grid.Column="3"
+                           Grid.Row="0"
+                           VerticalAlignment="Center"
+                           Margin="0"
+                           Height="20"
+                           Width="2" />
+
+                <!-- Cache Status/Icon -->
+                <Viewbox Grid.Column="4"
+                         Grid.Row="0"
+                         HorizontalAlignment="Stretch"
+                         Height="25"
+                         IsVisible="{Binding IsCacheInitial}">
+                    <Path VerticalAlignment="Center"
+                          Data="{StaticResource CircleRegular}"
+                          Fill="Purple" />
+                </Viewbox>
+
+                <TextBlock Grid.Column="4"
+                           Grid.Row="0"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"
+                           FontWeight="Bold"
+                           IsVisible="{Binding IsCaching}"
+                           Text="{Binding CacheProgress, StringFormat={}{0:P0}}" />
+
+                <Viewbox Grid.Column="4"
+                         Grid.Row="0"
+                         HorizontalAlignment="Stretch"
+                         Height="25"
+                         IsVisible="{Binding IsCached}">
+                    <Path VerticalAlignment="Center"
+                          Data="{StaticResource CheckmarkCircleRegular}"
+                          Fill="Green" />
+                </Viewbox>
+
+                <Button Grid.Column="5"
+                        Grid.Row="0"
+                        HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Center"
+                        VerticalAlignment="Stretch"
+                        VerticalContentAlignment="Center"
+                        Margin="5,0"
+                        Content="Cache"
+                        IsVisible="{Binding !IsCached}"
+                        Command="{Binding CacheItem}" />
+
+                <Button Grid.Column="5"
+                        Grid.Row="0"
+                        HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Center"
+                        VerticalAlignment="Stretch"
+                        VerticalContentAlignment="Center"
+                        Margin="5,0"
+                        Content="Free"
+                        IsVisible="{Binding IsCached}"
+                        Command="{Binding Delete}" />
+
+                <Separator Grid.Column="6"
+                           Grid.Row="0"
+                           VerticalAlignment="Center"
+                           Margin="0"
+                           Height="20"
+                           Width="2" />
+                
+                <TextBlock Grid.Column="7"
+                           Grid.Row="0"
+                           Margin="5,0"
+                           VerticalAlignment="Center"
+                           TextTrimming="CharacterEllipsis"
+                           FontSize="20"
+                           Text="{Binding DisplayName}" />
+                
+                <TextBlock Grid.Column="8"
+                           Grid.Row="0"
+                           Margin="5,0"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"
+                           Text="{Binding HighlightInfo, StringFormat={}{0:hh\\:mm\\:ss}}" />
+                
+                <Separator Grid.Column="9"
+                           Grid.Row="0"
+                           VerticalAlignment="Center"
+                           Margin="0"
+                           Height="20"
+                           Width="2" />
+                
+                <Button Grid.Column="10"
+                        Grid.Row="0"
+                        HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Center"
+                        VerticalAlignment="Stretch"
+                        VerticalContentAlignment="Center"
+                        Margin="5,0"
+                        Content="Remove" />
+            </Grid>
+        </Expander.Header>
+
+        <Expander.ContentTemplate>
+            <DataTemplate DataType="entities:AudioItem">
+                <Grid ColumnDefinitions="Auto, Auto, *, Auto, Auto"
+                      RowDefinitions="Auto, Auto, Auto, Auto">
+                    <Image Grid.Column="0"
+                           Grid.Row="0"
+                           Grid.RowSpan="4"
+                           Margin="0,0,15,0"
+                           Width="100"
+                           Source="{Binding AlbumArt, Converter={StaticResource ByteArrayToBitmapConverter}}" />
+
+                    <TextBlock Grid.Column="1"
+                               Grid.Row="0"
+                               Margin="5"
+                               VerticalAlignment="Center"
+                               FontWeight="Bold"
+                               Text="Title:" />
+                    <TextBlock Grid.Column="2"
+                               Grid.Row="0"
+                               Margin="5"
+                               VerticalAlignment="Center"
+                               FontSize="20"
+                               Text="{Binding Title}" />
+
+                    <TextBlock Grid.Column="1"
+                               Grid.Row="1"
+                               Margin="5"
+                               VerticalAlignment="Center"
+                               FontWeight="Bold"
+                               Text="Artist:" />
+                    <TextBlock Grid.Column="2"
+                               Grid.Row="1"
+                               Margin="5"
+                               VerticalAlignment="Center"
+                               FontSize="20"
+                               Text="{Binding Artist}" />
+
+                    <TextBlock Grid.Column="1"
+                               Grid.Row="2"
+                               Margin="5"
+                               VerticalAlignment="Center"
+                               FontWeight="Bold"
+                               Text="File:" />
+                    <TextBlock Grid.Column="2"
+                               Grid.Row="2"
+                               Margin="5"
+                               VerticalAlignment="Center"
+                               FontSize="20"
+                               Text="{Binding PathTitle}" />
+
+                    <TextBlock Grid.Column="1"
+                               Grid.Row="3"
+                               Margin="5"
+                               VerticalAlignment="Center"
+                               FontWeight="Bold"
+                               Text="Path:" />
+                    <TextBlock Grid.Column="2"
+                               Grid.Row="3"
+                               Margin="5"
+                               VerticalAlignment="Center"
+                               FontSize="20"
+                               TextTrimming="CharacterEllipsis"
+                               ToolTip.Tip="{Binding SourcePath}"
+                               Text="{Binding SourcePath}" />
+
+                    <TextBlock Grid.Column="3"
+                               Grid.Row="0"
+                               Grid.RowSpan="2"
+                               VerticalAlignment="Bottom"
+                               Margin="5"
+                               FontWeight="Bold"
+                               Text="Duration:" />
+                    <TextBlock Grid.Column="3"
+                               Grid.Row="2"
+                               Grid.RowSpan="2"
+                               VerticalAlignment="Top"
+                               Margin="5"
+                               FontSize="20"
+                               Text="{Binding Duration, StringFormat={}{0:hh\\:mm\\:ss}}" />
+
+                    <TextBlock Grid.Column="4"
+                               Grid.Row="0"
+                               Grid.RowSpan="2"
+                               VerticalAlignment="Bottom"
+                               Margin="5"
+                               FontWeight="Bold"
+                               Text="Format:" />
+                    <TextBlock Grid.Column="4"
+                               Grid.Row="2"
+                               Grid.RowSpan="2"
+                               VerticalAlignment="Top"
+                               Margin="5"
+                               FontSize="20"
+                               Text="{Binding MimeType}" />
+                </Grid>
+            </DataTemplate>
+        </Expander.ContentTemplate>
+    </Expander>
+
+</UserControl>

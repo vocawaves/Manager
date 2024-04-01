@@ -30,7 +30,20 @@ public class AudioItem : MediaItem
     /// Mime type of the album art. (if available)
     /// </summary>
     public string? AlbumArtMimeType { get; }
-    
+
+    /// <summary>
+    /// Display title of the audio item. Custom title if available, otherwise title or path title.
+    /// Truly a chain of nullables lol.
+    /// </summary>
+    public override string DisplayTitle => GetDisplayTitle();
+
+    private string GetDisplayTitle()
+    {
+        if (this.CustomTitle != null) return this.CustomTitle;
+        if (this.Title == null) return this.PathTitle;
+        if (this.Artist != null) return $"{this.Artist} - {this.Title}";
+        return this.Title;
+    }
 
     public AudioItem(ILoggerFactory lf, IDataService dataService, ulong ownerId, string sourcePath, string pathTitle, string title,
         string artist, TimeSpan duration) : base(lf, dataService, ownerId, sourcePath, pathTitle)

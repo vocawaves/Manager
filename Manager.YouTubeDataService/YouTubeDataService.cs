@@ -18,7 +18,7 @@ public class YouTubeDataService : IStreamingServiceSource, IAudioDataSource, IVi
     public event AsyncEventHandler<InitSuccessEventArgs>? InitSuccess;
     public event AsyncEventHandler<InitFailedEventArgs>? InitFailed;
 
-    public bool Initialized { get; }
+    public bool Initialized { get; } = true;
     public string Name { get; }
     public ulong Parent { get; }
 
@@ -86,7 +86,7 @@ public class YouTubeDataService : IStreamingServiceSource, IAudioDataSource, IVi
 
     public ValueTask<bool> InitializeAsync(params string[] options)
     {
-        throw new NotImplementedException();
+        return ValueTask.FromResult(true);
     }
 
     public ValueTask<MediaItem[]?> GetPlaylistAsync(string url, ItemType type, int limit = 0)
