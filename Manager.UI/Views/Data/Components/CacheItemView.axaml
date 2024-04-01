@@ -59,7 +59,7 @@
                 
                 <ProgressBar Grid.Column="2"
                              Grid.Row="1"
-                             Grid.ColumnSpan="8"
+                             Grid.ColumnSpan="9"
                              Margin="5,0"
                              VerticalAlignment="Center"
                              Padding="0"
