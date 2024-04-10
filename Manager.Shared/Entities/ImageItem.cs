@@ -17,8 +17,8 @@ public class ImageItem : MediaItem
     /// </summary>
     public int Height { get; }
 
-    public ImageItem(ILoggerFactory lf, IDataService dataService, ulong ownerId, string sourcePath, string pathTitle, int width,
-        int height) : base(lf, dataService, ownerId, sourcePath, pathTitle)
+    public ImageItem(IDataService dataService, ulong ownerId, string sourcePath, string pathTitle, int width,
+        int height, ILoggerFactory? lf = null) : base(dataService, ownerId, sourcePath, pathTitle, lf)
     {
         Width = width;
         Height = height;

@@ -5,7 +5,6 @@ using Manager.Shared.Events.Audio;
 using Manager.Shared.Events.General;
 using Manager.Shared.Helpers;
 using Manager.Shared.Interfaces.Audio;
-using Manager.Shared.Interfaces.General;
 using Microsoft.Extensions.Logging;
 
 namespace Manager.BassPlayer;
@@ -22,13 +21,13 @@ public class BassBackend : IAudioBackendService
     public string Name { get; }
     public ulong Parent { get; }
 
-    private readonly ILogger<BassBackend> _logger;
-    private readonly ILoggerFactory _logFactory;
+    private readonly ILogger<BassBackend>? _logger;
+    private readonly ILoggerFactory? _logFactory;
 
-    public BassBackend(ILoggerFactory logFactory, string name, ulong parent)
+    public BassBackend(string name, ulong parent, ILoggerFactory? lf = null)
     {
-        this._logFactory = logFactory;
-        this._logger = logFactory.CreateLogger<BassBackend>();
+        this._logFactory = lf;
+        this._logger = lf?.CreateLogger<BassBackend>();
         this.Name = name;
         this.Parent = parent;
     }
@@ -40,11 +39,11 @@ public class BassBackend : IAudioBackendService
         {
             this.InitFailed?.InvokeAndForget(this,
                 new InitFailedEventArgs(Bass.LastError.ToString()));
-            this._logger.LogError("Failed to initialize Bass: {BassLastError}", Bass.LastError);
+            this._logger?.LogError("Failed to initialize Bass: {BassLastError}", Bass.LastError);
             return ValueTask.FromResult(false);
         }
 
-        this._logger.LogInformation("Bass v{version} initialized", Bass.Version);
+        this._logger?.LogInformation("Bass v{version} initialized", Bass.Version);
 
         var plugins = Directory.GetFiles(Path.Combine(Directory.GetCurrentDirectory(), "BassPlugins"));
         foreach (var plugin in plugins)
@@ -53,31 +52,31 @@ public class BassBackend : IAudioBackendService
             {
                 var index = Bass.PluginLoad(plugin);
                 if (index == 0)
-                    this._logger.LogWarning("Failed to load plugin {plugin}: {BassLastError}", plugin, Bass.LastError);
+                    this._logger?.LogWarning("Failed to load plugin {plugin}: {BassLastError}", plugin, Bass.LastError);
                 else
-                    this._logger.LogInformation("Loaded plugin {plugin} at index {index}", plugin, index);
+                    this._logger?.LogInformation("Loaded plugin {plugin} at index {index}", plugin, index);
             }
             catch (Exception e)
             {
-                this._logger.LogError(e, "Failed to load plugin {plugin}, {BassLastError}", plugin, Bass.LastError);
+                this._logger?.LogError(e, "Failed to load plugin {plugin}, {BassLastError}", plugin, Bass.LastError);
             }
         }
 
         this.Initialized = true;
         this.InitSuccess?.InvokeAndForget(this, new InitSuccessEventArgs($"Bass v{Bass.Version} initialized"));
-        this._logger.LogInformation("BassBackend initialized");
+        this._logger?.LogInformation("BassBackend initialized");
         return ValueTask.FromResult(true);
     }
 
     public ValueTask<AudioDevice[]> GetDevicesAsync()
     {
         var devices = new AudioDevice[Bass.DeviceCount];
-        this._logger.LogDebug("Found {count} devices", devices.Length);
+        this._logger?.LogDebug("Found {count} devices", devices.Length);
         for (var i = 0; i < Bass.DeviceCount; i++)
         {
             var device = Bass.GetDeviceInfo(i);
             devices[i] = new AudioDevice(this, device.Name, i.ToString());
-            this._logger.LogDebug("Device {i}: {device}", i, devices[i]);
+            this._logger?.LogDebug("Device {i}: {device}", i, devices[i]);
         }
 
         return ValueTask.FromResult(devices);
@@ -87,7 +86,7 @@ public class BassBackend : IAudioBackendService
     {
         var device = Bass.CurrentDevice;
         var ad = new AudioDevice(this, device == -1 ? "Default" : Bass.GetDeviceInfo(device).Name, device.ToString());
-        this._logger.LogDebug("Current device: {device}", ad);
+        this._logger?.LogDebug("Current device: {device}", ad);
         return ValueTask.FromResult(ad);
     }
 
@@ -96,21 +95,21 @@ public class BassBackend : IAudioBackendService
         var validId = int.TryParse(device.Id, out var id);
         if (!validId)
         {
-            this._logger.LogError("Failed to parse device id from {device}", device);
+            this._logger?.LogError("Failed to parse device id from {device}", device);
             return false;
         }
 
         try
         {
-            this._logger.LogDebug("Setting device to {device}", device);
+            this._logger?.LogDebug("Setting device to {device}", device);
             var success = Bass.CurrentDevice = id;
             if (success == -1)
-                this._logger.LogError("Failed to set device to {device}: {BassLastError}", device, Bass.LastError);
+                this._logger?.LogError("Failed to set device to {device}: {BassLastError}", device, Bass.LastError);
             else
             {
                 this.GlobalDeviceChanged?.InvokeAndForget(this,
                     new GlobalAudioDeviceChangedEventArgs(device));
-                this._logger.LogInformation("Set device to {device}", device);
+                this._logger?.LogInformation("Set device to {device}", device);
             }
 
             return success != -1;
@@ -120,17 +119,17 @@ public class BassBackend : IAudioBackendService
             var bassError = Bass.LastError;
             if (bassError == Errors.Init) //Device has not been initialized
             {
-                this._logger.LogDebug("Device has not been initialized, initializing device {device}", device);
+                this._logger?.LogDebug("Device has not been initialized, initializing device {device}", device);
                 var bassInit = Bass.Init(id);
                 if (bassInit)
                     return await this.SetDeviceAsync(device); //try again
 
-                this._logger.LogError("Failed to initialize new device {device}: {BassLastError}", device,
+                this._logger?.LogError("Failed to initialize new device {device}: {BassLastError}", device,
                     Bass.LastError);
                 return false;
             }
 
-            this._logger.LogError(e, "Failed to set device to {device}: {BassLastError}", device, Bass.LastError);
+            this._logger?.LogError(e, "Failed to set device to {device}: {BassLastError}", device, Bass.LastError);
             return false;
         }
     }
@@ -138,7 +137,7 @@ public class BassBackend : IAudioBackendService
     public ValueTask<float> GetDefaultVolumeAsync()
     {
         var volume = Bass.Volume;
-        this._logger.LogDebug("Default volume: {volume}", volume);
+        this._logger?.LogDebug("Default volume: {volume}", volume);
         return ValueTask.FromResult((float)volume);
     }
 
@@ -148,57 +147,51 @@ public class BassBackend : IAudioBackendService
         {
             var success = Bass.Volume = volume;
             if ((int)success == -1)
-                this._logger.LogError("Failed to set default volume to {volume}: {BassLastError}", volume,
+                this._logger?.LogError("Failed to set default volume to {volume}: {BassLastError}", volume,
                     Bass.LastError);
             else
             {
                 this.GlobalVolumeChanged?.InvokeAndForget(this,
                     new GlobalDefaultVolumeChangedEventArgs(volume));
-                this._logger.LogInformation("Set default volume to {volume}", volume);
+                this._logger?.LogInformation("Set default volume to {volume}", volume);
             }
 
             return ValueTask.FromResult(success >= 0);
         }
         catch (Exception e)
         {
-            this._logger.LogError(e, "Failed to set default volume to {volume}: {BassLastError}", volume,
+            this._logger?.LogError(e, "Failed to set default volume to {volume}: {BassLastError}", volume,
                 Bass.LastError);
             return ValueTask.FromResult(false);
         }
     }
 
-    public async ValueTask<IMediaChannel?> CreateChannelAsync(MediaItem mediaItem)
+    public async ValueTask<IAudioChannel?> CreateChannelAsync(AudioItem mediaItem)
     {
         if (!this.Initialized)
         {
-            this._logger.LogError("BassBackend has not been initialized");
-            return default;
-        }
-        
-        if (mediaItem is not AudioItem audioItem)
-        {
-            this._logger.LogError("MediaItem is not an AudioItem");
+            this._logger?.LogError("BassBackend has not been initialized");
             return default;
         }
 
         int stream;
         if (mediaItem.CacheState != CacheState.Cached)
         {
-            this._logger.LogError("MediaItem has not been cached");
+            this._logger?.LogError("MediaItem has not been cached");
             return default;
         }
 
         try
         {
-            var cachePath = await audioItem.GetCachePathAsync();
+            var cachePath = await mediaItem.GetCachePathAsync();
             switch (cachePath)
             {
                 case null:
-                    this._logger.LogError("Failed to get cached stream for {mediaItem}", mediaItem);
+                    this._logger?.LogError("Failed to get cached stream for {mediaItem}", mediaItem);
                     return default;
                 default:
                 {
-                    this._logger.LogDebug("Using temporary MemoryStream for {mediaItem}", mediaItem);
+                    this._logger?.LogDebug("Using temporary MemoryStream for {mediaItem}", mediaItem);
                     stream = Bass.CreateStream(cachePath, 0, 0,
                         BassFlags.Default | BassFlags.Float);
                     break;
@@ -207,19 +200,24 @@ public class BassBackend : IAudioBackendService
         }
         catch (Exception e)
         {
-            this._logger.LogError(e, "Failed to create stream for {audioItem}", audioItem);
+            this._logger?.LogError(e, "Failed to create stream for {audioItem}", mediaItem);
             return default;
         }
 
         if (stream == 0)
         {
-            this._logger.LogError("Failed to create stream for {audioItem}: {BassLastError}", audioItem,
+            this._logger?.LogError("Failed to create stream for {audioItem}: {BassLastError}", mediaItem,
                 Bass.LastError);
             return default;
         }
 
-        var channel = new BassChannel(this._logFactory.CreateLogger<BassChannel>(), this, audioItem, stream);
-        this._logger.LogInformation("Created channel for {SourcePath}", audioItem.SourcePath);
+        var channel = new BassChannel(this, mediaItem, stream, this._logFactory?.CreateLogger<BassChannel>());
+        this._logger?.LogInformation("Created channel for {SourcePath}", mediaItem.SourcePath);
         return channel;
+    }
+
+    public ValueTask<bool> IsMediaItemSupportedAsync(MediaItem mediaItem)
+    {
+        throw new NotImplementedException();
     }
 }

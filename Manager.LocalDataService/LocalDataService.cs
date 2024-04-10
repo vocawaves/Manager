@@ -21,15 +21,15 @@ public class LocalDataService : IFileSystemSource, IAudioDataSource, IVideoDataS
     public ulong Parent { get; }
 
 
-    private readonly ILogger<LocalDataService> _logger;
+    private readonly ILogger<LocalDataService>? _logger;
     private readonly ICacheStrategy _cacheStrategy;
-    private readonly ILoggerFactory _loggerFactory;
+    private readonly ILoggerFactory? _loggerFactory;
 
-    public LocalDataService(ILoggerFactory lf, string name, ulong parent)
+    public LocalDataService(string name, ulong parent, ILoggerFactory? lf = null)
     {
         _loggerFactory = lf;
         _cacheStrategy = new BasicCacheStrategy(lf);
-        _logger = lf.CreateLogger<LocalDataService>();
+        _logger = lf?.CreateLogger<LocalDataService>();
         Name = name;
         Parent = parent;
     }
@@ -55,7 +55,7 @@ public class LocalDataService : IFileSystemSource, IAudioDataSource, IVideoDataS
     {
         if (!Directory.Exists(uri))
         {
-            _logger.LogError("Directory not found: {0}", uri);
+            _logger?.LogError("Directory not found: {0}", uri);
             return ValueTask.FromResult(Array.Empty<FileItem>());
         }
 
@@ -73,7 +73,7 @@ public class LocalDataService : IFileSystemSource, IAudioDataSource, IVideoDataS
     {
         if (!Directory.Exists(uri))
         {
-            _logger.LogError("Directory not found: {0}", uri);
+            _logger?.LogError("Directory not found: {0}", uri);
             return ValueTask.FromResult(Array.Empty<DirectoryItem>());
         }
 
@@ -92,14 +92,14 @@ public class LocalDataService : IFileSystemSource, IAudioDataSource, IVideoDataS
     {
         if (!File.Exists(uri))
         {
-            _logger.LogError("File not found: {0}", uri);
+            _logger?.LogError("File not found: {0}", uri);
             return null;
         }
 
         var mimeType = await GetMimeType(uri);
         if (!mimeType.StartsWith("audio/"))
         {
-            this._logger.LogWarning("File {0} is not an audio file, mime type: {1}", uri, mimeType);
+            this._logger?.LogWarning("File {0} is not an audio file, mime type: {1}", uri, mimeType);
         }
 
         var metadata = FfmpegReader.ReadMetaDataTags(uri);
@@ -109,8 +109,8 @@ public class LocalDataService : IFileSystemSource, IAudioDataSource, IVideoDataS
         var albumArt = await FfmpegReader.TryReadCoverArt(uri);
         if (albumArt is null)
         {
-            _logger.LogInformation("No album art found for {0}", uri);
-            return new AudioItem(this._loggerFactory, this, Parent, uri, Path.GetFileName(uri), title, artist, duration)
+            _logger?.LogInformation("No album art found for {0}", uri);
+            return new AudioItem(this, Parent, uri, Path.GetFileName(uri), title, artist, duration, this._loggerFactory)
             {
                 MimeType = mimeType,
                 Metadata = metadata
@@ -118,7 +118,7 @@ public class LocalDataService : IFileSystemSource, IAudioDataSource, IVideoDataS
         }
         
         var albumArtMimeType = MimeGuesser.GuessMimeType(albumArt);
-        return new AudioItem(this._loggerFactory, this, Parent, uri, Path.GetFileName(uri), title, artist, duration, albumArt, albumArtMimeType)
+        return new AudioItem(this, Parent, uri, Path.GetFileName(uri), title, artist, duration, albumArt, albumArtMimeType, this._loggerFactory)
         {
             MimeType = mimeType,
             Metadata = metadata
@@ -174,19 +174,19 @@ public class LocalDataService : IFileSystemSource, IAudioDataSource, IVideoDataS
     {
         if (item.CacheState == CacheState.Cached)
         {
-            _logger.LogInformation("Item {0} is already cached", item.SourcePath);
+            _logger?.LogInformation("Item {0} is already cached", item.SourcePath);
             return true;
         }
         
         if (item.CacheState == CacheState.Caching)
         {
-            _logger.LogInformation("Item {0} is already being cached", item.SourcePath);
+            _logger?.LogInformation("Item {0} is already being cached", item.SourcePath);
             return true;
         }
         
         if (!File.Exists(item.SourcePath))
         {
-            _logger.LogError("File not found: {0}", item.SourcePath);
+            _logger?.LogError("File not found: {0}", item.SourcePath);
             return false;
         }
         
@@ -230,7 +230,7 @@ public class LocalDataService : IFileSystemSource, IAudioDataSource, IVideoDataS
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "Failed to guess mime type for {0}", uri);
+            _logger?.LogError(e, "Failed to guess mime type for {0}", uri);
             return "application/octet-stream";
         }
     }

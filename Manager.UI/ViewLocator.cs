@@ -14,7 +14,7 @@ public class ViewLocator : IDataTemplate
             return viewModel switch
             {
                 MainViewModel => new Views.MainView(),
-                CacheItemViewModel => new Views.Data.Components.CacheItemView(),
+                BaseCacheItemViewModel => new Views.Data.Components.CacheItemView(),
                 _ => null
             };
         }

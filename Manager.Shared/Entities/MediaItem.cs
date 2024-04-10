@@ -51,11 +51,6 @@ public class MediaItem : IAsyncDisposable
     /// Custom title of the media item. Can be set by the user.
     /// </summary>
     public string? CustomTitle { get; set; }
-    /// <summary>
-    /// Display title of the media item. Custom title if available, otherwise path title.
-    /// Might be used in UI. Should maybe be moved to a view model.
-    /// </summary>
-    public virtual string DisplayTitle => CustomTitle ?? PathTitle;
     
     /// <summary>
     /// Mime type of the media item.
@@ -82,11 +77,11 @@ public class MediaItem : IAsyncDisposable
     /// </summary>
     internal IDataService DataService { get; set; }
     
-    private readonly ILogger<MediaItem> _logger;
+    private readonly ILogger<MediaItem>? _logger;
     
-    public MediaItem(ILoggerFactory lf, IDataService dataService, ulong ownerId, string sourcePath, string pathTitle)
+    public MediaItem(IDataService dataService, ulong ownerId, string sourcePath, string pathTitle, ILoggerFactory? lf = null)
     {
-        _logger = lf.CreateLogger<MediaItem>();
+        _logger = lf?.CreateLogger<MediaItem>();
         DataService = dataService;
         OwnerId = ownerId;
         SourcePath = sourcePath;
@@ -101,10 +96,10 @@ public class MediaItem : IAsyncDisposable
     {
         if (this.CacheState == state)
         {
-            this._logger.LogDebug("Cache state is already {State}", state);
+            this._logger?.LogDebug("Cache state is already {State}", state);
             return;
         }
-        this._logger.LogInformation("Cache state changed to {State}", state);
+        this._logger?.LogInformation("Cache state changed to {State}", state);
         this.CacheState = state;
         switch (state)
         {
@@ -129,11 +124,11 @@ public class MediaItem : IAsyncDisposable
     {
         if (this.CacheProgress.Equals(progress))
         {
-            this._logger.LogDebug("Cache progress is already {Progress}", progress);
+            this._logger?.LogDebug("Cache progress is already {Progress}", progress);
             return;
         }
         
-        this._logger.LogInformation("Cache progress changed to {Progress}", progress);
+        this._logger?.LogInformation("Cache progress changed to {Progress}", progress);
         this.CacheProgress = progress;
         this.CacheProgressChanged?.InvokeAndForget(this, new CacheProgressChangesEventArgs(progress));
     }

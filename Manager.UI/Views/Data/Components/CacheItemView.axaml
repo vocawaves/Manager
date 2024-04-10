@@ -5,11 +5,13 @@
              xmlns:components="clr-namespace:Manager.UI.ViewModels.Data.Components"
              xmlns:entities="clr-namespace:Manager.Shared.Entities;assembly=Manager.Shared"
              xmlns:converters="clr-namespace:Manager.UI.Converters"
+             xmlns:viewComponents="clr-namespace:Manager.UI.Views.Data.Components"
+             xmlns:views="clr-namespace:Manager.UI.Extras.Views"
              mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="300"
              x:Class="Manager.UI.Views.Data.Components.CacheItemView"
-             x:DataType="components:CacheItemViewModel">
+             x:DataType="components:BaseCacheItemViewModel">
     <Design.DataContext>
-        <components:CacheItemViewModel />
+        <components:AudioCacheItemViewModel />
     </Design.DataContext>
 
     <UserControl.Resources>
@@ -25,9 +27,12 @@
               HorizontalAlignment="Stretch"
               HorizontalContentAlignment="Stretch"
               VerticalContentAlignment="Stretch"
-              Content="{Binding BackingMediaItem}">
+              Header="{Binding }" 
+              Content="{Binding }">
 
-        <Expander.Header>
+        <Expander.HeaderTemplate>
+            <DataTemplate DataType="components:AudioCacheItemViewModel">
+                
             <Grid ColumnDefinitions="Auto, Auto, 100, Auto, 100, 100, Auto, *, 100, Auto, 100"
                   RowDefinitions="Auto, Auto"
                   HorizontalAlignment="Stretch"
@@ -77,7 +82,7 @@
                          Grid.Row="0"
                          HorizontalAlignment="Stretch"
                          Height="25"
-                         IsVisible="{Binding IsCacheInitial}">
+                         IsVisible="{Binding IsNotCached}">
                     <Path VerticalAlignment="Center"
                           Data="{StaticResource CircleRegular}"
                           Fill="Purple" />
@@ -89,7 +94,7 @@
                            VerticalAlignment="Center"
                            FontWeight="Bold"
                            IsVisible="{Binding IsCaching}"
-                           Text="{Binding CacheProgress, StringFormat={}{0:P0}}" />
+                           Text="{Binding CacheProgress, StringFormat={}{0:P1}}" />
 
                 <Viewbox Grid.Column="4"
                          Grid.Row="0"
@@ -108,9 +113,9 @@
                         VerticalAlignment="Stretch"
                         VerticalContentAlignment="Center"
                         Margin="5,0"
-                        Content="Cache"
+                        Content="Load"
                         IsVisible="{Binding !IsCached}"
-                        Command="{Binding CacheItem}" />
+                        Command="{Binding CacheAsync}" />
 
                 <Button Grid.Column="5"
                         Grid.Row="0"
@@ -119,9 +124,9 @@
                         VerticalAlignment="Stretch"
                         VerticalContentAlignment="Center"
                         Margin="5,0"
-                        Content="Free"
+                        Content="Unload"
                         IsVisible="{Binding IsCached}"
-                        Command="{Binding Delete}" />
+                        Command="{Binding UnCacheAsync}" />
 
                 <Separator Grid.Column="6"
                            Grid.Row="0"
@@ -143,7 +148,7 @@
                            Margin="5,0"
                            HorizontalAlignment="Center"
                            VerticalAlignment="Center"
-                           Text="{Binding HighlightInfo, StringFormat={}{0:hh\\:mm\\:ss}}" />
+                           Text="{Binding Duration, StringFormat={}{0:hh\\:mm\\:ss}}" />
                 
                 <Separator Grid.Column="9"
                            Grid.Row="0"
@@ -161,12 +166,13 @@
                         Margin="5,0"
                         Content="Remove" />
             </Grid>
-        </Expander.Header>
+            </DataTemplate>
+        </Expander.HeaderTemplate>
 
         <Expander.ContentTemplate>
-            <DataTemplate DataType="entities:AudioItem">
-                <Grid ColumnDefinitions="Auto, Auto, *, Auto, Auto"
-                      RowDefinitions="Auto, Auto, Auto, Auto">
+            <DataTemplate DataType="components:AudioCacheItemViewModel">
+                <Grid ColumnDefinitions="Auto, Auto, *, 150, 150"
+                      RowDefinitions="Auto, Auto, Auto, Auto, Auto">
                     <Image Grid.Column="0"
                            Grid.Row="0"
                            Grid.RowSpan="4"
@@ -211,7 +217,7 @@
                                Margin="5"
                                VerticalAlignment="Center"
                                FontSize="20"
-                               Text="{Binding PathTitle}" />
+                               Text="{Binding BackingMediaItem.PathTitle}" />
 
                     <TextBlock Grid.Column="1"
                                Grid.Row="3"
@@ -225,8 +231,8 @@
                                VerticalAlignment="Center"
                                FontSize="20"
                                TextTrimming="CharacterEllipsis"
-                               ToolTip.Tip="{Binding SourcePath}"
-                               Text="{Binding SourcePath}" />
+                               ToolTip.Tip="{Binding BackingMediaItem.SourcePath}"
+                               Text="{Binding BackingMediaItem.SourcePath}" />
 
                     <TextBlock Grid.Column="3"
                                Grid.Row="0"
@@ -256,7 +262,19 @@
                                VerticalAlignment="Top"
                                Margin="5"
                                FontSize="20"
-                               Text="{Binding MimeType}" />
+                               Text="{Binding DataMimeType}" />
+                    
+                    <UserControl Grid.Column="0"
+                                 Grid.ColumnSpan="5"
+                                 Grid.Row="4"
+                                 IsVisible="{Binding IsCached}"
+                                 Margin="0,15,0,0"
+                                 HorizontalAlignment="Stretch"
+                                 VerticalAlignment="Stretch">
+                        <views:AudioPreviewPlayerView 
+                            DataContext="{Binding PreviewPlayerViewModel}" />
+                    </UserControl>
+                    
                 </Grid>
             </DataTemplate>
         </Expander.ContentTemplate>

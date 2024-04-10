@@ -8,7 +8,7 @@ namespace Manager.Shared.Interfaces.General;
 public interface IBackendService : IManagerComponent
 {
     /// <summary>
-    /// Creates a media channel for the given media item.
+    /// Checks if the media item is supported by the backend.
     /// </summary>
-    public ValueTask<IMediaChannel?> CreateChannelAsync(MediaItem mediaItem);
+    public ValueTask<bool> IsMediaItemSupportedAsync(MediaItem mediaItem);
 }

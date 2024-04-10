@@ -1,32 +1,26 @@
-﻿using Manager.Shared.Events.Video;
-using Manager.Shared.Helpers;
-
-namespace Manager.Shared.Interfaces.Video;
+﻿namespace Manager.Shared.Interfaces.Video;
 
 /// <summary>
 /// A wrapper for a video player surface that is not managed by the manager.
 /// </summary>
 public interface IExternalPlayerSurface
 {
+    
     /// <summary>
-    /// A descriptive name for the screen.
-    /// Can also be just a part of the screen if the screen is split.
+    /// A descriptive name for the surface.
+    /// Can also be just a part of the screen if the surface is split.
     /// </summary>
-    public string ScreenName { get; }
+    public string SurfaceName { get; }
 
     /// <summary>
     /// The current target of the surface. Window handle or other target. a bit WIP
     /// </summary>
-    public IntPtr CurrentTarget { get; }
+    public IntPtr? GetNativeReference();
     
     /// <summary>
-    /// Fired when the target of the surface changes.
+    /// The video channel that is currently displayed on the surface.
     /// </summary>
-    public event AsyncEventHandler<ExternalPlayerSurfaceTargetChanged>? TargetChanged;
-    
-    /// <summary>
-    /// Sets the target of the surface.
-    /// Also fires the <see cref="TargetChanged"/> event.
-    /// </summary>
-    public ValueTask<bool> SetTargetAsync(IntPtr target);
+    public IVideoChannel? VideoChannel { get; set; }
+
+    public static abstract IExternalPlayerSurface? CreateSurface(IVideoChannel channel, string surfaceName);
 }

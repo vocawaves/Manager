@@ -23,7 +23,11 @@ public interface IAudioBackendService : IBackendService
     /// Only fired if the Init device was changed.
     /// </summary>
     public event AsyncEventHandler<GlobalAudioDeviceChangedEventArgs>? GlobalDeviceChanged; 
-    //public event AudioServiceChannelVolumeChangedEventHandler? ChannelVolumeChanged;
+    
+    /// <summary>
+    /// Create a new audio channel for the given audio item.
+    /// </summary>
+    public ValueTask<IAudioChannel?> CreateChannelAsync(AudioItem item);
     
     /// <summary>
     /// Get all available audio devices this service can use.

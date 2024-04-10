@@ -1,29 +1,30 @@
 ﻿using System.Collections.ObjectModel;
 using System.Threading.Tasks;
 using Avalonia.Threading;
+using Manager.Shared.Interfaces.Audio;
 using Manager.Shared.Interfaces.Data;
 using Manager.UI.ViewModels.Data.Components;
-using Microsoft.Extensions.Logging;
 
 namespace Manager.UI.ViewModels;
 
 public partial class MainViewModel : ViewModelBase
 {    
-    public ObservableCollection<CacheItemViewModel> CacheItems { get; } = new();
+    public ObservableCollection<BaseCacheItemViewModel> CacheItems { get; } = new();
     
     private IStreamingServiceSource _streamingServiceSource;
     private IFileSystemSource _fileSystemSource;
     
     public MainViewModel()
     {
-        var lf = new LoggerFactory();
-        _fileSystemSource = new LocalDataService.LocalDataService(lf, "Local", 0);
-        _streamingServiceSource = new YouTubeDataService.YouTubeDataService(lf, "YouTube", 0);
+        _fileSystemSource = new LocalDataService.LocalDataService( "Local", 0);
+        _streamingServiceSource = new YouTubeDataService.YouTubeDataService( "YouTube", 0);
         _ = Task.Run(DemoInit);
     }
     
     private async Task DemoInit()
     {
+        await GlobalAudioBackendService.InitializeAsync();
+        
         await _fileSystemSource.InitializeAsync();
         await _streamingServiceSource.InitializeAsync();
         
@@ -51,7 +52,7 @@ public partial class MainViewModel : ViewModelBase
             if (localItem == null) 
                 continue;
             
-            var localItemViewModel = new CacheItemViewModel(localItem);
+            var localItemViewModel = new AudioCacheItemViewModel(localItem);
             await Dispatcher.UIThread.InvokeAsync(() => CacheItems.Add(localItemViewModel));
         }
     }
@@ -64,6 +65,9 @@ public partial class MainViewModel : ViewModelBase
         
         var youtubeToGet = new[] 
         {
+            "https://www.youtube.com/watch?v=N13AJER09K8",
+            "https://www.youtube.com/watch?v=cVfxLn8Kw84",
+            "https://www.youtube.com/watch?v=tpodtZo5HRg",
             "https://www.youtube.com/watch?v=zxKVW3mNf_8",
             "https://www.youtube.com/watch?v=LaEgpNBt-bQ",
             "https://www.youtube.com/watch?v=jPPiy_NKRzU"
@@ -75,8 +79,14 @@ public partial class MainViewModel : ViewModelBase
             if (youtubeItem == null) 
                 continue;
             
-            var youtubeItemViewModel = new CacheItemViewModel(youtubeItem);
+            var youtubeItemViewModel = new AudioCacheItemViewModel(youtubeItem);
             await Dispatcher.UIThread.InvokeAsync(() => CacheItems.Add(youtubeItemViewModel));
         }
     }
+
+    #region Demo
+
+    public static IAudioBackendService GlobalAudioBackendService { get; } = new BassPlayer.BassBackend("Bass", 0);
+
+    #endregion
 }

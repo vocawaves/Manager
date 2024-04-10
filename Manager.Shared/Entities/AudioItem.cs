@@ -31,31 +31,17 @@ public class AudioItem : MediaItem
     /// </summary>
     public string? AlbumArtMimeType { get; }
 
-    /// <summary>
-    /// Display title of the audio item. Custom title if available, otherwise title or path title.
-    /// Truly a chain of nullables lol.
-    /// </summary>
-    public override string DisplayTitle => GetDisplayTitle();
-
-    private string GetDisplayTitle()
-    {
-        if (this.CustomTitle != null) return this.CustomTitle;
-        if (this.Title == null) return this.PathTitle;
-        if (this.Artist != null) return $"{this.Artist} - {this.Title}";
-        return this.Title;
-    }
-
-    public AudioItem(ILoggerFactory lf, IDataService dataService, ulong ownerId, string sourcePath, string pathTitle, string title,
-        string artist, TimeSpan duration) : base(lf, dataService, ownerId, sourcePath, pathTitle)
+    public AudioItem(IDataService dataService, ulong ownerId, string sourcePath, string pathTitle, string title,
+        string artist, TimeSpan duration, ILoggerFactory? lf = null) : base(dataService, ownerId, sourcePath, pathTitle, lf)
     {
         Title = title;
         Artist = artist;
         Duration = duration;
     }
 
-    public AudioItem(ILoggerFactory lf, IDataService dataService, ulong ownerId, string sourcePath, string pathTitle, string title,
-        string artist, TimeSpan duration, byte[] albumArt, string albumArtMimeType) : base(lf, dataService, ownerId,
-        sourcePath, pathTitle)
+    public AudioItem(IDataService dataService, ulong ownerId, string sourcePath, string pathTitle, string title,
+        string artist, TimeSpan duration, byte[] albumArt, string albumArtMimeType,ILoggerFactory? lf = null) : base(dataService, ownerId,
+        sourcePath, pathTitle, lf)
     {
         Title = title;
         Artist = artist;

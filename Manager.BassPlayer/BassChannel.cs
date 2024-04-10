@@ -13,7 +13,7 @@ namespace Manager.BassPlayer;
 
 public class BassChannel : IAudioChannel
 {
-    private readonly ILogger<BassChannel> _logger;
+    private readonly ILogger<BassChannel>? _logger;
 
     public event AsyncEventHandler? Playing;
     public event AsyncEventHandler? Paused;
@@ -36,8 +36,8 @@ public class BassChannel : IAudioChannel
     //private PeriodicTimer _positionTimer = new PeriodicTimer(TimeSpan.FromMilliseconds(10));
     private Timer _positionTimer = new Timer(TimeSpan.FromMilliseconds(1000.0 / 60.0));
 
-    public BassChannel(ILogger<BassChannel> logger, IBackendService associatedBackend, AudioItem audioItem,
-        int bassChannel)
+    public BassChannel(IBackendService associatedBackend, AudioItem audioItem,
+        int bassChannel, ILogger<BassChannel>? logger = null)
     {
         this._logger = logger;
         this._bassChannel = bassChannel;
@@ -61,29 +61,31 @@ public class BassChannel : IAudioChannel
         var syncHandle = Bass.ChannelSetSync(_bassChannel, SyncFlags.End, 0, (_, _, _, _) =>
         {
             this.Ended?.InvokeAndForget(this, EventArgs.Empty);
+            this.StateChanged?.InvokeAndForget(this, new ChannelStateChangedEventArgs(ChannelState.Ended));
             this._positionTimer.Stop();
-            this._logger.LogInformation("End sync for channel {channel} invoked", _bassChannel);
+            this._logger?.LogInformation("End sync for channel {channel} invoked", _bassChannel);
         }, IntPtr.Zero);
         if (syncHandle == 0)
-            this._logger.LogWarning("Failed to set end sync for channel {channel}: {BassLastError}", _bassChannel,
+            this._logger?.LogWarning("Failed to set end sync for channel {channel}: {BassLastError}", _bassChannel,
                 Bass.LastError);
         else
-            this._logger.LogInformation("Set end sync for channel {channel} at handle {syncHandle}", _bassChannel,
+            this._logger?.LogInformation("Set end sync for channel {channel} at handle {syncHandle}", _bassChannel,
                 syncHandle);
     }
 
     public ValueTask<bool> PlayAsync()
     {
-        var success = Bass.ChannelPlay(this._bassChannel);
+        var success = Bass.ChannelPlay(this._bassChannel, true);
         if (!success)
         {
-            this._logger.LogError("Failed to play channel {channel}: {BassLastError}", _bassChannel, Bass.LastError);
+            this._logger?.LogError("Failed to play channel {channel}: {BassLastError}", _bassChannel, Bass.LastError);
             return ValueTask.FromResult(false);
         }
         
         this.Playing?.InvokeAndForget(this, EventArgs.Empty);
+        this.StateChanged?.InvokeAndForget(this, new ChannelStateChangedEventArgs(ChannelState.Playing));
         this._positionTimer.Start();
-        this._logger.LogInformation("Playing channel {channel}", _bassChannel);
+        this._logger?.LogInformation("Playing channel {channel}", _bassChannel);
         return ValueTask.FromResult(true);
     }
 
@@ -92,13 +94,14 @@ public class BassChannel : IAudioChannel
         var success = Bass.ChannelPause(_bassChannel);
         if (!success)
         {
-            this._logger.LogError("Failed to pause channel {channel}: {BassLastError}", _bassChannel, Bass.LastError);
+            this._logger?.LogError("Failed to pause channel {channel}: {BassLastError}", _bassChannel, Bass.LastError);
             return ValueTask.FromResult(false);
         }
         
-        this.Paused?.InvokeAndForget(this, EventArgs.Empty);
         this._positionTimer.Stop();
-        this._logger.LogInformation("Paused channel {channel}", _bassChannel);
+        this.Paused?.InvokeAndForget(this, EventArgs.Empty);
+        this.StateChanged?.InvokeAndForget(this, new ChannelStateChangedEventArgs(ChannelState.Paused));
+        this._logger?.LogInformation("Paused channel {channel}", _bassChannel);
         return ValueTask.FromResult(true);
     }
 
@@ -107,13 +110,14 @@ public class BassChannel : IAudioChannel
         var success = Bass.ChannelPlay(_bassChannel);
         if (!success)
         {
-            this._logger.LogError("Failed to resume channel {channel}: {BassLastError}", _bassChannel, Bass.LastError);
+            this._logger?.LogError("Failed to resume channel {channel}: {BassLastError}", _bassChannel, Bass.LastError);
             return ValueTask.FromResult(false);
         }
         
-        this.Resumed?.InvokeAndForget(this, EventArgs.Empty);
         this._positionTimer.Start();
-        this._logger.LogInformation("Resumed channel {channel}", _bassChannel);
+        this.Resumed?.InvokeAndForget(this, EventArgs.Empty);
+        this.StateChanged?.InvokeAndForget(this, new ChannelStateChangedEventArgs(ChannelState.Playing));
+        this._logger?.LogInformation("Resumed channel {channel}", _bassChannel);
         return ValueTask.FromResult(true);
     }
 
@@ -123,19 +127,20 @@ public class BassChannel : IAudioChannel
         var resetPos = Bass.ChannelSetPosition(_bassChannel, 0);
         if (!success)
         {
-            this._logger.LogError("Failed to stop channel {channel}: {BassLastError}", _bassChannel, Bass.LastError);
+            this._logger?.LogError("Failed to stop channel {channel}: {BassLastError}", _bassChannel, Bass.LastError);
             return ValueTask.FromResult(false);
         }
         if (!resetPos)
         {
-            this._logger.LogError("Failed to reset position for channel {channel}: {BassLastError}", _bassChannel,
+            this._logger?.LogError("Failed to reset position for channel {channel}: {BassLastError}", _bassChannel,
                 Bass.LastError);
             return ValueTask.FromResult(false);
         }
         
         this.Stopped?.InvokeAndForget(this, EventArgs.Empty);
+        this.StateChanged?.InvokeAndForget(this, new ChannelStateChangedEventArgs(ChannelState.Stopped));
         this._positionTimer.Stop();
-        this._logger.LogInformation("Stopped channel {channel}", _bassChannel);
+        this._logger?.LogInformation("Stopped channel {channel}", _bassChannel);
         return ValueTask.FromResult(true);
     }
 
@@ -157,7 +162,7 @@ public class BassChannel : IAudioChannel
 
     public ValueTask<bool> SetStateAsync(ChannelState state)
     {
-        this._logger.LogDebug("Setting state for channel {channel} to {state}", _bassChannel, state);
+        this._logger?.LogDebug("Setting state for channel {channel} to {state}", _bassChannel, state);
         switch (state)
         {
             case ChannelState.Stopped:
@@ -178,12 +183,12 @@ public class BassChannel : IAudioChannel
         try
         {
             var posAsSeconds = Bass.ChannelBytes2Seconds(_bassChannel, Bass.ChannelGetPosition(_bassChannel));
-            this._logger.LogDebug("Got position for channel {channel}: {position}", _bassChannel, posAsSeconds);
+            this._logger?.LogDebug("Got position for channel {channel}: {position}", _bassChannel, posAsSeconds);
             return ValueTask.FromResult<TimeSpan?>(TimeSpan.FromSeconds(posAsSeconds));
         }
         catch (Exception e)
         {
-            this._logger.LogError(e, "Failed to get position for channel {channel}: {BassLastError}", _bassChannel,
+            this._logger?.LogError(e, "Failed to get position for channel {channel}: {BassLastError}", _bassChannel,
                 Bass.LastError);
             return ValueTask.FromResult<TimeSpan?>(default);
         }
@@ -198,19 +203,19 @@ public class BassChannel : IAudioChannel
             var success = Bass.ChannelSetPosition(_bassChannel, posAsBytes);
             if (!success)
             {
-                this._logger.LogError("Failed to set position to {position}: {BassLastError}", msAsSeconds,
+                this._logger?.LogError("Failed to set position to {position}: {BassLastError}", msAsSeconds,
                     Bass.LastError);
                 return ValueTask.FromResult(false);
             }
 
             this.PositionChanged?.InvokeAndForget(this,
                 new ChannelPositionChangedEventArgs(TimeSpan.FromMilliseconds(positionMs)));
-            this._logger.LogInformation("Set position to {position}", msAsSeconds);
+            this._logger?.LogInformation("Set position to {position}", msAsSeconds);
             return ValueTask.FromResult(true);
         }
         catch (Exception e)
         {
-            this._logger.LogError(e, "Failed to set position to {position}: {BassLastError}", msAsSeconds,
+            this._logger?.LogError(e, "Failed to set position to {position}: {BassLastError}", msAsSeconds,
                 Bass.LastError);
             return ValueTask.FromResult(false);
         }
@@ -229,20 +234,20 @@ public class BassChannel : IAudioChannel
         {
             this.PositionTriggerInvoked?.InvokeAndForget(this,
                 new ChannelPositionTriggerInvokedEventArgs(trigger));
-            this._logger.LogDebug("Position trigger {trigger.Name} at {trigger.Position} invoked", trigger.Name,
+            this._logger?.LogDebug("Position trigger {trigger.Name} at {trigger.Position} invoked", trigger.Name,
                 trigger.Position);
         }, IntPtr.Zero);
         
         if (syncHandle == 0)
         {
-            this._logger.LogError("Failed to set position trigger for channel {channel}: {BassLastError}", _bassChannel,
+            this._logger?.LogError("Failed to set position trigger for channel {channel}: {BassLastError}", _bassChannel,
                 Bass.LastError);
             return ValueTask.FromResult<PositionTrigger?>(default);
         }
         
         this.PositionTriggers.Add(trigger);
         this._positionTriggerHandles.Add(trigger, syncHandle);
-        this._logger.LogInformation("Set position trigger for channel {channel} at handle {syncHandle}", _bassChannel,
+        this._logger?.LogInformation("Set position trigger for channel {channel} at handle {syncHandle}", _bassChannel,
             syncHandle);
         return ValueTask.FromResult<PositionTrigger?>(trigger);
     }
@@ -251,7 +256,7 @@ public class BassChannel : IAudioChannel
     {
         if (!this._positionTriggerHandles.TryGetValue(trigger, out var syncHandle))
         {
-            this._logger.LogError("Failed to remove position trigger {trigger} for channel {channel}: Not found", trigger,
+            this._logger?.LogError("Failed to remove position trigger {trigger} for channel {channel}: Not found", trigger,
                 _bassChannel);
             return ValueTask.FromResult(false);
         }
@@ -259,14 +264,14 @@ public class BassChannel : IAudioChannel
         var success = Bass.ChannelRemoveSync(_bassChannel, syncHandle);
         if (!success)
         {
-            this._logger.LogError("Failed to remove position trigger {trigger} for channel {channel}: {BassLastError}",
+            this._logger?.LogError("Failed to remove position trigger {trigger} for channel {channel}: {BassLastError}",
                 trigger, _bassChannel, Bass.LastError);
             return ValueTask.FromResult(false);
         }
 
         this.PositionTriggers.Remove(trigger);
         this._positionTriggerHandles.Remove(trigger);
-        this._logger.LogInformation("Removed position trigger {trigger} for channel {channel}", trigger, _bassChannel);
+        this._logger?.LogInformation("Removed position trigger {trigger} for channel {channel}", trigger, _bassChannel);
         return ValueTask.FromResult(true);
     }
 
@@ -275,12 +280,12 @@ public class BassChannel : IAudioChannel
         try
         {
             var length = Bass.ChannelBytes2Seconds(_bassChannel, Bass.ChannelGetLength(_bassChannel));
-            this._logger.LogDebug("Got length for channel {channel}: {length}", _bassChannel, length);
+            this._logger?.LogDebug("Got length for channel {channel}: {length}", _bassChannel, length);
             return ValueTask.FromResult<TimeSpan?>(TimeSpan.FromSeconds(length));
         }
         catch (Exception e)
         {
-            this._logger.LogError(e, "Failed to get length for channel {channel}: {BassLastError}", _bassChannel,
+            this._logger?.LogError(e, "Failed to get length for channel {channel}: {BassLastError}", _bassChannel,
                 Bass.LastError);
             return ValueTask.FromResult<TimeSpan?>(default);
         }
@@ -288,7 +293,7 @@ public class BassChannel : IAudioChannel
 
     public async ValueTask<bool> DestroyAsync()
     {
-        this._logger.LogInformation("Destroying channel {channel}", _bassChannel);
+        this._logger?.LogInformation("Destroying channel {channel}", _bassChannel);
         await this.DisposeAsync();
         return true;
     }
@@ -298,12 +303,12 @@ public class BassChannel : IAudioChannel
         try
         {
             var volume = Bass.ChannelGetAttribute(_bassChannel, ChannelAttribute.Volume);
-            this._logger.LogDebug("Got volume for channel {channel}: {volume}", _bassChannel, volume);
+            this._logger?.LogDebug("Got volume for channel {channel}: {volume}", _bassChannel, volume);
             return ValueTask.FromResult<float?>((float)volume);
         }
         catch (Exception e)
         {
-            this._logger.LogError(e, "Failed to get volume for channel {channel}: {BassLastError}", _bassChannel,
+            this._logger?.LogError(e, "Failed to get volume for channel {channel}: {BassLastError}", _bassChannel,
                 Bass.LastError);
             return ValueTask.FromResult<float?>(default);
         }
@@ -314,12 +319,12 @@ public class BassChannel : IAudioChannel
         var success = Bass.ChannelSetAttribute(_bassChannel, ChannelAttribute.Volume, volume);
         if (!success)
         {
-            this._logger.LogError("Failed to set volume to {volume}: {BassLastError}", volume, Bass.LastError);
+            this._logger?.LogError("Failed to set volume to {volume}: {BassLastError}", volume, Bass.LastError);
             return ValueTask.FromResult(false);
         }
 
         this.ChannelVolumeChanged?.InvokeAndForget(this, new ChannelVolumeChangedEventArgs(volume));
-        this._logger.LogInformation("Set volume to {volume}", volume);
+        this._logger?.LogInformation("Set volume to {volume}", volume);
         return ValueTask.FromResult(true);
     }
 
@@ -328,7 +333,7 @@ public class BassChannel : IAudioChannel
         var device = Bass.ChannelGetDevice(_bassChannel);
         if (device == -1)
         {
-            this._logger.LogError("Failed to get device for channel {channel}: {BassLastError}", _bassChannel,
+            this._logger?.LogError("Failed to get device for channel {channel}: {BassLastError}", _bassChannel,
                 Bass.LastError);
             return ValueTask.FromResult<AudioDevice?>(null);
         }
@@ -338,12 +343,12 @@ public class BassChannel : IAudioChannel
             var deviceInfo = Bass.GetDeviceInfo(device);
             var audioDevice = new AudioDevice((IAudioBackendService)this.AssociatedBackend, deviceInfo.Name,
                 device.ToString());
-            this._logger.LogDebug("Got device for channel {channel}: {device}", _bassChannel, audioDevice);
+            this._logger?.LogDebug("Got device for channel {channel}: {device}", _bassChannel, audioDevice);
             return ValueTask.FromResult<AudioDevice?>(audioDevice);
         }
         catch (Exception e)
         {
-            this._logger.LogError(e, "Failed to get device for channel {channel}: {BassLastError}", _bassChannel,
+            this._logger?.LogError(e, "Failed to get device for channel {channel}: {BassLastError}", _bassChannel,
                 Bass.LastError);
             return ValueTask.FromResult<AudioDevice?>(null);
         }
@@ -354,19 +359,19 @@ public class BassChannel : IAudioChannel
         var isValue = int.TryParse(device.Id, out var id);
         if (!isValue)
         {
-            this._logger.LogError("Failed to parse device id from {device}", device);
+            this._logger?.LogError("Failed to parse device id from {device}", device);
             return ValueTask.FromResult(false);
         }
 
         var success = Bass.ChannelSetDevice(this._bassChannel, id);
         if (!success)
         {
-            this._logger.LogError("Failed to set device to {device}: {BassLastError}", device, Bass.LastError);
+            this._logger?.LogError("Failed to set device to {device}: {BassLastError}", device, Bass.LastError);
             return ValueTask.FromResult(false);
         }
 
         this.ChannelDeviceChanged?.InvokeAndForget(this, new ChannelDeviceChangedEventArgs(device));
-        this._logger.LogInformation("Set device to {device}", device);
+        this._logger?.LogInformation("Set device to {device}", device);
         return ValueTask.FromResult(true);
     }
 

@@ -10,11 +10,11 @@ public class BasicCacheStrategy : ICacheStrategy
     private readonly string _cacheDirectory;
     
     private readonly Dictionary<MediaItem, string> _cachedItems = new();
-    private readonly ILogger<BasicCacheStrategy> _logger;
+    private readonly ILogger<BasicCacheStrategy>? _logger;
 
-    public BasicCacheStrategy(ILoggerFactory lf)
+    public BasicCacheStrategy(ILoggerFactory? lf = null)
     {
-        _logger = lf.CreateLogger<BasicCacheStrategy>();
+        _logger = lf?.CreateLogger<BasicCacheStrategy>();
         _cacheDirectory = Path.Combine(Directory.GetCurrentDirectory(), "ManagerCache");
         if (!Directory.Exists(_cacheDirectory))
             Directory.CreateDirectory(_cacheDirectory);
@@ -26,7 +26,7 @@ public class BasicCacheStrategy : ICacheStrategy
             return true;
         
         var cachePath = Path.Combine(_cacheDirectory, cacheName);
-        this._logger.LogDebug("Caching {PathTitle} to {CachePath}", mediaItem.PathTitle, cachePath);
+        this._logger?.LogDebug("Caching {PathTitle} to {CachePath}", mediaItem.PathTitle, cachePath);
         try
         {
             await using var fs = File.Create(cachePath);
@@ -47,7 +47,7 @@ public class BasicCacheStrategy : ICacheStrategy
         }
         catch (Exception e)
         {
-            this._logger.LogError(e, "Failed to cache {PathTitle} to {CachePath}", mediaItem.PathTitle, cachePath);
+            this._logger?.LogError(e, "Failed to cache {PathTitle} to {CachePath}", mediaItem.PathTitle, cachePath);
             return false;
         }
     }
@@ -58,7 +58,7 @@ public class BasicCacheStrategy : ICacheStrategy
             return true;
         
         var cachePath = Path.Combine(_cacheDirectory, cacheName);
-        this._logger.LogDebug("Caching {PathTitle} to {CachePath}", mediaItem.PathTitle, cachePath);
+        this._logger?.LogDebug("Caching {PathTitle} to {CachePath}", mediaItem.PathTitle, cachePath);
         try
         {
             await using var fs = File.Create(cachePath);
@@ -83,7 +83,7 @@ public class BasicCacheStrategy : ICacheStrategy
         }
         catch (Exception e)
         {
-            this._logger.LogError(e, "Failed to cache {PathTitle} to {CachePath}", mediaItem.PathTitle, cachePath);
+            this._logger?.LogError(e, "Failed to cache {PathTitle} to {CachePath}", mediaItem.PathTitle, cachePath);
             return false;
         }
     }
@@ -94,12 +94,12 @@ public class BasicCacheStrategy : ICacheStrategy
             return true;
         
         var cachePath = Path.Combine(_cacheDirectory, cacheName);
-        this._logger.LogDebug("Caching {PathTitle} to {CachePath}", mediaItem.PathTitle, cachePath);
+        this._logger?.LogDebug("Caching {PathTitle} to {CachePath}", mediaItem.PathTitle, cachePath);
         try
         {
             //File.Copy(path, cachePath, true);
-            using var source = File.OpenRead(path);
-            using var destination = File.Create(cachePath);
+            await using var source = File.OpenRead(path);
+            await using var destination = File.Create(cachePath);
             //write in 1MB chunks (or less if last chunk)
             var buffer = new byte[1024 * 1024];
             int bytesRead;
@@ -115,7 +115,7 @@ public class BasicCacheStrategy : ICacheStrategy
         }
         catch (Exception e)
         {
-            this._logger.LogError(e, "Failed to cache {PathTitle} to {CachePath}", mediaItem.PathTitle, cachePath);
+            this._logger?.LogError(e, "Failed to cache {PathTitle} to {CachePath}", mediaItem.PathTitle, cachePath);
             mediaItem.SetCacheState(CacheState.Failed);
             return false;
         }
@@ -127,7 +127,7 @@ public class BasicCacheStrategy : ICacheStrategy
             return ValueTask.FromResult(false);
         
         var path = this._cachedItems[mediaItem];
-        this._logger.LogDebug("Removing {PathTitle} from {CachePath}", mediaItem.PathTitle, path);
+        this._logger?.LogDebug("Removing {PathTitle} from {CachePath}", mediaItem.PathTitle, path);
         try
         {
             File.Delete(path);
@@ -138,7 +138,7 @@ public class BasicCacheStrategy : ICacheStrategy
         }
         catch (Exception e)
         {
-            this._logger.LogError(e, "Failed to remove {PathTitle} from {CachePath}", mediaItem.PathTitle, path);
+            this._logger?.LogError(e, "Failed to remove {PathTitle} from {CachePath}", mediaItem.PathTitle, path);
             return ValueTask.FromResult(false);
         }
     }
@@ -149,7 +149,7 @@ public class BasicCacheStrategy : ICacheStrategy
             return ValueTask.FromResult<string?>(null);
         
         var path = this._cachedItems[mediaItem];
-        this._logger.LogDebug("Returning {PathTitle} from {CachePath}", mediaItem.PathTitle, path);
+        this._logger?.LogDebug("Returning {PathTitle} from {CachePath}", mediaItem.PathTitle, path);
         return ValueTask.FromResult<string?>(path);
     }
 
@@ -159,14 +159,14 @@ public class BasicCacheStrategy : ICacheStrategy
             return ValueTask.FromResult<Stream?>(null);
         
         var path = this._cachedItems[mediaItem];
-        this._logger.LogDebug("Opening {PathTitle} from {CachePath}", mediaItem.PathTitle, path);
+        this._logger?.LogDebug("Opening {PathTitle} from {CachePath}", mediaItem.PathTitle, path);
         try
         {
             return ValueTask.FromResult<Stream?>(File.OpenRead(path));
         }
         catch (Exception e)
         {
-            this._logger.LogError(e, "Failed to open {PathTitle} from {CachePath}", mediaItem.PathTitle, path);
+            this._logger?.LogError(e, "Failed to open {PathTitle} from {CachePath}", mediaItem.PathTitle, path);
             return ValueTask.FromResult<Stream?>(null);
         }
     }

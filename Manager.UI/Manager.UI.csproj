@@ -23,6 +23,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Manager.BassPlayer\Manager.BassPlayer.csproj" />
     <ProjectReference Include="..\Manager.LocalDataService\Manager.LocalDataService.csproj" />
     <ProjectReference Include="..\Manager.Shared\Manager.Shared.csproj" />
     <ProjectReference Include="..\Manager.YouTubeDataService\Manager.YouTubeDataService.csproj" />

@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using LibVLCSharp.Shared;
 using Manager.BassPlayer;
 using Manager.LocalDataService;
 using Manager.Shared.Interfaces.Data;
@@ -16,32 +17,53 @@ internal class Program
         
         var logger = lf.CreateLogger<Program>();
         
-        var dataService = new LocalDataService(lf, "Basic", 0);
-        var ytService = new YouTubeDataService(lf, "YouTube", 0);
-        var audioBackend = new BassBackend(lf, "Bass", 0);
+        var dataService = new LocalDataService( "Basic", 0);
+        var ytService = new YouTubeDataService( "YouTube", 0);
+        var audioBackend = new BassBackend( "Bass", 0);
         await audioBackend.InitializeAsync();
 
-        var itm = await ytService.GetAudioItemAsync("https://www.youtube.com/watch?v=D5FiNo8CRvM");
-        if (itm is null)
+        var itm = await ytService.GetVideoItemAsync("https://www.youtube.com/watch?v=DRZjKAHoP34");
+        var itmA = await ytService.GetAudioItemAsync("https://www.youtube.com/watch?v=DRZjKAHoP34");
+        if (itm is null || itmA is null)
         {
             logger.LogError("Failed to get audio item");
             return;
         }
         
+        itm.CacheProgressChanged += (sender, args) =>
+        {
+            logger.LogInformation("Video: Cache progress changed to {Progress}", args.Progress);
+            return ValueTask.CompletedTask;
+        };
+        itm.CacheStateChanged += (sender, args) =>
+        {
+            logger.LogInformation("Audio: Cache state changed to {State}", args.State);
+            return ValueTask.CompletedTask;
+        };
+        
         var cached = await itm.CacheAsync();
-        if (!cached)
+        var cachedA = await itmA.CacheAsync();
+        if (!cached || !cachedA)
         {
             logger.LogError("Failed to cache audio item");
             return;
         }
+
+        var cachePath = await itm.GetCachePathAsync();
+        var cachePathA = await itmA.GetCachePathAsync();
+        if (cachePath is null || cachePathA is null)
+        {
+            logger.LogError("Failed to get cache path");
+            return;
+        }
         
-        var chan1 = await audioBackend.CreateChannelAsync(itm);
+        var chan1 = await audioBackend.CreateChannelAsync(itmA);
         if (chan1 is null)
         {
             logger.LogError("Failed to create channel");
             return;
         }
-        var chan2 = await audioBackend.CreateChannelAsync(itm);
+        var chan2 = await audioBackend.CreateChannelAsync(itmA);
         if (chan2 is null)
         {
             logger.LogError("Failed to create channel");

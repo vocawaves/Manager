@@ -12,25 +12,27 @@ public class VideoItem : MediaItem
     /// Duration of the video item.
     /// </summary>
     public TimeSpan Duration { get; }
+
     /// <summary>
     /// Thumbnail data in bytes. (if available)
     /// </summary>
     public byte[]? ThumbnailData { get; }
+
     /// <summary>
     /// Mime type of the thumbnail. (if available)
     /// </summary>
     public string? ThumbnailMimeType { get; }
 
-    public VideoItem(ILoggerFactory lf, IDataService source, ulong ownerId, string sourcePath, string pathTitle,
-        TimeSpan duration) : base(lf,
-        source, ownerId, sourcePath, pathTitle)
+    public VideoItem(IDataService source, ulong ownerId, string sourcePath, string pathTitle,
+        TimeSpan duration, ILoggerFactory? lf = null) : base(source, ownerId, sourcePath, pathTitle, lf)
     {
         Duration = duration;
     }
 
-    public VideoItem(ILoggerFactory lf, IDataService source, ulong ownerId, string sourcePath, string pathTitle,
+    public VideoItem(IDataService source, ulong ownerId, string sourcePath, string pathTitle,
         TimeSpan duration,
-        byte[] thumbnailData, string thumbnailMimeType) : base(lf, source, ownerId, sourcePath, pathTitle)
+        byte[] thumbnailData, string thumbnailMimeType, ILoggerFactory? lf = null) : base(source, ownerId, sourcePath,
+        pathTitle, lf)
     {
         Duration = duration;
         ThumbnailData = thumbnailData;

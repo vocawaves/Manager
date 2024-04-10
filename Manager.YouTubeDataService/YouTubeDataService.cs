@@ -22,17 +22,17 @@ public class YouTubeDataService : IStreamingServiceSource, IAudioDataSource, IVi
     public string Name { get; }
     public ulong Parent { get; }
 
-    private readonly ILogger<YouTubeDataService> _logger;
+    private readonly ILogger<YouTubeDataService>? _logger;
     private readonly ICacheStrategy _cacheStrategy;
     private readonly YoutubeClient _youtubeClient;
     private readonly HttpClient _httpClient;
-    private readonly ILoggerFactory _loggerFactory;
+    private readonly ILoggerFactory? _loggerFactory;
 
-    public YouTubeDataService(ILoggerFactory lf, string name, ulong parent)
+    public YouTubeDataService(string name, ulong parent, ILoggerFactory? lf = null)
     {
         _loggerFactory = lf;
         _cacheStrategy = new BasicCacheStrategy(lf);
-        _logger = lf.CreateLogger<YouTubeDataService>();
+        _logger = lf?.CreateLogger<YouTubeDataService>();
         Name = name;
         Parent = parent;
         _youtubeClient = new YoutubeClient();
@@ -45,23 +45,35 @@ public class YouTubeDataService : IStreamingServiceSource, IAudioDataSource, IVi
         var videoId = VideoId.TryParse(uri);
         if (videoId is null)
         {
-            _logger.LogError("Failed to parse video id from uri {Uri}", uri);
+            _logger?.LogError("Failed to parse video id from uri {Uri}", uri);
             return null;
         }
 
         var video = await _youtubeClient.Videos.GetAsync(videoId.Value);
-        this._logger.LogDebug("Got video {Title} by {Author}", video.Title, video.Author.ChannelTitle);
+        this._logger?.LogDebug("Got video {Title} by {Author}", video.Title, video.Author.ChannelTitle);
         var thumbnailUrl = video.Thumbnails.GetWithHighestResolution();
         var thumbnailData = await _httpClient.GetByteArrayAsync(thumbnailUrl.Url);
         var thumbnailMimeType = MimeGuesser.GuessMimeType(thumbnailData);
-        var audioItem = new AudioItem(this._loggerFactory, this, Parent, uri, videoId, video.Title, video.Author.ChannelTitle,
-            video.Duration ?? TimeSpan.Zero, thumbnailData, thumbnailMimeType);
+        var audioItem = new AudioItem(this, Parent, uri, videoId, video.Title, video.Author.ChannelTitle,
+            video.Duration ?? TimeSpan.Zero, thumbnailData, thumbnailMimeType, this._loggerFactory);
         return audioItem;
     }
 
-    public ValueTask<VideoItem?> GetVideoItemAsync(string uri)
-    {
-        throw new NotImplementedException();
+    public async ValueTask<VideoItem?> GetVideoItemAsync(string uri)
+    {var videoId = VideoId.TryParse(uri);
+        if (videoId is null)
+        {
+            _logger?.LogError("Failed to parse video id from uri {Uri}", uri);
+            return null;
+        }
+
+        var video = await _youtubeClient.Videos.GetAsync(videoId.Value);
+        this._logger?.LogDebug("Got video {Title} by {Author}", video.Title, video.Author.ChannelTitle);
+        var thumbnailUrl = video.Thumbnails.GetWithHighestResolution();
+        var thumbnailData = await _httpClient.GetByteArrayAsync(thumbnailUrl.Url);
+        var thumbnailMimeType = MimeGuesser.GuessMimeType(thumbnailData);
+        var videoItem = new VideoItem(this, Parent, uri, videoId, video.Duration ?? TimeSpan.Zero, thumbnailData, thumbnailMimeType, this._loggerFactory);
+        return videoItem;
     }
 
     public ValueTask<SubtitleItem?> GetSubtitleItemAsync(string uri)
@@ -109,32 +121,32 @@ public class YouTubeDataService : IStreamingServiceSource, IAudioDataSource, IVi
         item.SetCacheState(CacheState.Caching);
         IStreamInfo streamInfo;
         var manifest = await _youtubeClient.Videos.Streams.GetManifestAsync(item.SourcePath);
-        this._logger.LogDebug("Got manifest for {PathTitle}", item.PathTitle);
+        this._logger?.LogDebug("Got manifest for {PathTitle}", item.PathTitle);
         switch (item)
         {
             case AudioItem:
                 streamInfo = manifest.GetAudioOnlyStreams().GetWithHighestBitrate();
-                this._logger.LogDebug("Got audio stream for {PathTitle}, bitrate: {Bitrate}", item.PathTitle,
+                this._logger?.LogDebug("Got audio stream for {PathTitle}, bitrate: {Bitrate}", item.PathTitle,
                     streamInfo.Bitrate);
                 break;
             case VideoItem:
-                streamInfo = manifest.GetMuxedStreams().GetWithHighestVideoQuality();
-                this._logger.LogDebug("Got video stream for {PathTitle}, size: {Size}", item.PathTitle,
+                streamInfo = manifest.GetVideoStreams().GetWithHighestVideoQuality();
+                this._logger?.LogDebug("Got video stream for {PathTitle}, size: {Size}", item.PathTitle,
                     streamInfo.Size);
                 break;
             default:
-                this._logger.LogError("Unknown item type {ItemType}", item.GetType().Name);
+                this._logger?.LogError("Unknown item type {ItemType}", item.GetType().Name);
                 item.SetCacheState(CacheState.Failed);
                 return false;
         }
         
         using var ms = new MemoryStream();
-        _logger.LogInformation("Caching {PathTitle} to MemoryStream", item.PathTitle);
+        _logger?.LogInformation("Caching {PathTitle} to MemoryStream", item.PathTitle);
         await _youtubeClient.Videos.Streams.CopyToAsync(streamInfo, ms, new Progress<double>((progress) =>
         {
             item.SetCacheProgress(progress * 100);
         }));
-        this._logger.LogInformation("{PathTitle} has been cached to MemoryStream", item.PathTitle);
+        this._logger?.LogInformation("{PathTitle} has been cached to MemoryStream", item.PathTitle);
         var mimeType = MimeGuesser.GuessMimeType(ms.GetBuffer()); 
         item.MimeType = mimeType;
         var cacheNameExtension = item switch
@@ -144,7 +156,7 @@ public class YouTubeDataService : IStreamingServiceSource, IAudioDataSource, IVi
             _ => throw new ArgumentOutOfRangeException(nameof(item))
         };
         var cacheName = $"{item.OwnerId}_{item.PathTitle}.{cacheNameExtension}";
-        this._logger.LogDebug("Saving {PathTitle} to {CacheName}", item.PathTitle, cacheName);
+        this._logger?.LogDebug("Saving {PathTitle} to {CacheName}", item.PathTitle, cacheName);
         return await _cacheStrategy.CacheAsync(item, ms, cacheName);
     }
 
