@@ -13,7 +13,7 @@ public interface IVideoChannel
     /// <summary>
     /// Fired when the video surface of this channel changes.
     /// </summary>
-    public event AsyncEventHandler<ExternalPlayerSurfaceChangedEventArgs>? ExternalVideoSurfaceCreated;
+    public event AsyncEventHandler<ExternalPlayerSurfaceChangedEventArgs>? ExternalVideoSurfaceChanged;
 
     #endregion
     
@@ -22,7 +22,7 @@ public interface IVideoChannel
     /// <summary>
     /// Sets the external video surface of this channel.
     /// Can be obtained from its backend service.
-    /// Also fires the <see cref="ExternalVideoSurfaceCreated"/> event.
+    /// Also fires the <see cref="ExternalVideoSurfaceChanged"/> event.
     /// </summary>
-    public ValueTask<TView> CreateExternalVideoSurfaceAsync<TView>(string? name) where TView : class, IExternalPlayerSurface;
+    public ValueTask<bool> SetExternalVideoSurfaceAsync(IExternalPlayerSurface surface);
 }

@@ -9,6 +9,10 @@ namespace Manager.Shared.Interfaces.Data;
 public interface ICacheStrategy
 {
     /// <summary>
+    /// Check if the media item is already cached.
+    /// </summary>
+    public ValueTask<bool> CheckForOldCacheAsync(MediaItem mediaItem, string cacheName);
+    /// <summary>
     /// Cache the media item from a byte array.
     /// </summary>
     public ValueTask<bool> CacheAsync(MediaItem mediaItem, byte[] data, string cacheName);

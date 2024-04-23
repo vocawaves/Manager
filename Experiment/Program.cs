@@ -1,7 +1,7 @@
 ﻿using Avalonia;
 using System;
 
-namespace SandBoxUI;
+namespace Experiment;
 
 sealed class Program
 {

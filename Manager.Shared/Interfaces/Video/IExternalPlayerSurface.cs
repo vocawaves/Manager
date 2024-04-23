@@ -16,11 +16,6 @@ public interface IExternalPlayerSurface
     /// The current target of the surface. Window handle or other target. a bit WIP
     /// </summary>
     public IntPtr? GetNativeReference();
-    
-    /// <summary>
-    /// The video channel that is currently displayed on the surface.
-    /// </summary>
-    public IVideoChannel? VideoChannel { get; set; }
 
-    public static abstract IExternalPlayerSurface? CreateSurface(IVideoChannel channel, string surfaceName);
+    public ValueTask<bool> PrepareVideoAsync(IVideoChannel channel);
 }

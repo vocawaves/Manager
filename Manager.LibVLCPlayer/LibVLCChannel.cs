@@ -1,4 +1,4 @@
-﻿using LibVLCSharp.Shared;
+﻿using LibVLCSharp;
 using Manager.Shared.Entities;
 using Manager.Shared.Enums;
 using Manager.Shared.Events.Audio;
@@ -13,7 +13,6 @@ namespace Manager.LibVLCPlayer;
 
 public class LibVLCChannel : IMediaChannel, IVideoChannel, IChannelSupportsAudioSlaves
 {
-    private readonly Media _media;
     public event AsyncEventHandler? Playing;
     public event AsyncEventHandler? Paused;
     public event AsyncEventHandler? Resumed;
@@ -23,77 +22,39 @@ public class LibVLCChannel : IMediaChannel, IVideoChannel, IChannelSupportsAudio
     public event AsyncEventHandler<ChannelPositionChangedEventArgs>? PositionChanged;
     public event AsyncEventHandler<ChannelPositionTriggerInvokedEventArgs>? PositionTriggerInvoked;
 
-    public event AsyncEventHandler<ExternalPlayerSurfaceChangedEventArgs>? ExternalVideoSurfaceCreated;
+    public event AsyncEventHandler<ExternalPlayerSurfaceChangedEventArgs>? ExternalVideoSurfaceChanged;
 
     public IBackendService AssociatedBackend { get; }
     public MediaItem MediaItem { get; }
     public List<PositionTrigger> PositionTriggers { get; } = new();
     private readonly List<PositionTrigger> _positionTriggersAlreadyTriggered = new();
 
-    public LibVLC LibVLCInstance { get; private set; }
-    public MediaPlayer MediaPlayer { get; private set; }
-
     public IExternalPlayerSurface? ExternalVideoSurface { get; private set; }
-
-    public LibVLCChannel(IBackendService backend, MediaItem item, LibVLC libVLCInstance, MediaPlayer mediaPlayer,
-        Media media)
+    public MediaPlayer? CurrentMediaPlayer { get; private set; }
+    public Media? CurrentMedia { get; private set; }
+    
+    public LibVLCChannel(IBackendService backend, MediaItem item)
     {
-        this._media = media;
         this.AssociatedBackend = backend;
         this.MediaItem = item;
-        this.LibVLCInstance = libVLCInstance;
-        this.MediaPlayer = mediaPlayer;
-        this.SetupEvents();
-    }
-    
-    private void SetupEvents()
-    {
-        this.MediaPlayer.EndReached += (sender, args) =>
-        {
-            this.MediaPlayer.Media = this._media; // Reset media
-            this.Ended?.InvokeAndForget(this, EventArgs.Empty);
-        };
-        this.MediaPlayer.PositionChanged += (sender, args) =>
-        {
-            var pos = TimeSpan.FromMilliseconds(this.MediaPlayer.Time);
-            this.PositionChanged?.InvokeAndForget(this, new ChannelPositionChangedEventArgs(pos));
-        };
-        this.MediaPlayer.PositionChanged += (sender, args) =>
-        {
-            var pos = TimeSpan.FromMilliseconds(this.MediaPlayer.Time);
-            foreach (var trigger in this.PositionTriggers)
-            {
-                if (this._positionTriggersAlreadyTriggered.Contains(trigger))
-                    continue;
-                if (pos < trigger.Position) 
-                    continue;
-                this.PositionTriggerInvoked?.InvokeAndForget(this, new ChannelPositionTriggerInvokedEventArgs(trigger));
-                this._positionTriggersAlreadyTriggered.Add(trigger);
-            }
-        };
     }
 
     public async ValueTask<bool> PlayAsync()
     {
-        var playTcs = new TaskCompletionSource<bool>();
-        void OnPlaying(object? sender, EventArgs e)
-        {
-            playTcs?.SetResult(true);
-            this.MediaPlayer.Playing -= OnPlaying;
-        }
+        if (this.CurrentMediaPlayer == null)
+            return false;
 
         try
         {
-            this.MediaPlayer.Position = 0;
-            this.MediaPlayer.Playing += OnPlaying;
-            this.MediaPlayer.Play();
-            await playTcs.Task;
+            if(this.ExternalVideoSurface == null)
+                return false;
+            await this.ExternalVideoSurface.PrepareVideoAsync(this);
+            await this.CurrentMediaPlayer.PlayAsync();
             this.Playing?.InvokeAndForget(this, EventArgs.Empty);
             this.StateChanged?.InvokeAndForget(this, new ChannelStateChangedEventArgs(ChannelState.Playing));
         }
-        catch (Exception e)
+        catch (Exception e) 
         {
-            this.MediaPlayer.Playing -= OnPlaying; // Ensure we don't leak the event handler
             return false;
         }
 
@@ -102,24 +63,26 @@ public class LibVLCChannel : IMediaChannel, IVideoChannel, IChannelSupportsAudio
 
     public async ValueTask<bool> PauseAsync()
     {
+        if (this.CurrentMediaPlayer == null)
+            return false;
         var pauseTcs = new TaskCompletionSource<bool>();
         void OnPaused(object? sender, EventArgs e)
         {
             pauseTcs?.SetResult(true);
-            this.MediaPlayer.Paused -= OnPaused;
+            this.CurrentMediaPlayer!.Paused -= OnPaused;
         }
         
         try
         {
-            this.MediaPlayer.Paused += OnPaused;
-            this.MediaPlayer.Pause();
+            this.CurrentMediaPlayer.Paused += OnPaused;
+            this.CurrentMediaPlayer.Pause();
             await pauseTcs.Task;
             this.Paused?.InvokeAndForget(this, EventArgs.Empty);
             this.StateChanged?.InvokeAndForget(this, new ChannelStateChangedEventArgs(ChannelState.Paused));
         }
         catch (Exception e)
         {
-            this.MediaPlayer.Paused -= OnPaused; // Ensure we don't leak the event handler
+            this.CurrentMediaPlayer.Paused -= OnPaused; // Ensure we don't leak the event handler
             return false;
         }
         
@@ -128,24 +91,26 @@ public class LibVLCChannel : IMediaChannel, IVideoChannel, IChannelSupportsAudio
 
     public async ValueTask<bool> ResumeAsync()
     {
+        if (this.CurrentMediaPlayer == null)
+            return false;
         var resumeTcs = new TaskCompletionSource<bool>();
         void OnResumed(object? sender, EventArgs e)
         {
             resumeTcs?.SetResult(true);
-            this.MediaPlayer.Playing -= OnResumed;
+            this.CurrentMediaPlayer!.Playing -= OnResumed;
         }
         
         try
         {
-            this.MediaPlayer.Playing += OnResumed;
-            this.MediaPlayer.Play();
+            this.CurrentMediaPlayer.Playing += OnResumed;
+            this.CurrentMediaPlayer.Play();
             await resumeTcs.Task;
             this.Resumed?.InvokeAndForget(this, EventArgs.Empty);
             this.StateChanged?.InvokeAndForget(this, new ChannelStateChangedEventArgs(ChannelState.Playing));
         }
         catch (Exception e)
         {
-            this.MediaPlayer.Playing -= OnResumed; // Ensure we don't leak the event handler
+            this.CurrentMediaPlayer.Playing -= OnResumed; // Ensure we don't leak the event handler
             return false;
         }
         
@@ -154,25 +119,21 @@ public class LibVLCChannel : IMediaChannel, IVideoChannel, IChannelSupportsAudio
 
     public async ValueTask<bool> StopAsync()
     {
-        var stopTcs = new TaskCompletionSource<bool>();
-        void OnStopped(object? sender, EventArgs e)
-        {
-            stopTcs?.SetResult(true);
-            this.MediaPlayer.Stopped -= OnStopped;
-        }
+        if (this.CurrentMediaPlayer == null)
+            return false;
         
         try
         {
-            this.MediaPlayer.Stopped += OnStopped;
-            this.MediaPlayer.Stop();
-            await stopTcs.Task;
-            this.MediaPlayer.Media = this._media; // Reset media
+            await this.CurrentMediaPlayer.StopAsync();
+            var vlcControl = this.ExternalVideoSurface as IVLCVideoControl;
+            if (vlcControl == null)
+                return false;
+            await vlcControl.PrepareVideoAsync(this);
             this.Stopped?.InvokeAndForget(this, EventArgs.Empty);
             this.StateChanged?.InvokeAndForget(this, new ChannelStateChangedEventArgs(ChannelState.Stopped));
         }
         catch (Exception e)
         {
-            this.MediaPlayer.Stopped -= OnStopped; // Ensure we don't leak the event handler
             return false;
         }
         
@@ -181,13 +142,14 @@ public class LibVLCChannel : IMediaChannel, IVideoChannel, IChannelSupportsAudio
 
     public ValueTask<ChannelState> GetStateAsync()
     {
-        var state = this.MediaPlayer.State switch
+        if (this.CurrentMediaPlayer == null)
+            return new ValueTask<ChannelState>(ChannelState.Invalid);
+        var state = this.CurrentMediaPlayer.State switch
         {
             VLCState.NothingSpecial => ChannelState.Stopped,
             VLCState.Playing => ChannelState.Playing,
             VLCState.Paused => ChannelState.Paused,
             VLCState.Stopped => ChannelState.Stopped,
-            VLCState.Ended => ChannelState.Ended,
             _ => ChannelState.Invalid
         };
         return ValueTask.FromResult(state);
@@ -210,19 +172,25 @@ public class LibVLCChannel : IMediaChannel, IVideoChannel, IChannelSupportsAudio
 
     public ValueTask<TimeSpan?> GetPositionAsync()
     {
-        var pos = this.MediaPlayer.Time;
+        if (this.CurrentMediaPlayer == null)
+            return new ValueTask<TimeSpan?>(TimeSpan.Zero);
+        var pos = this.CurrentMediaPlayer.Time;
         return ValueTask.FromResult<TimeSpan?>(TimeSpan.FromMilliseconds(pos));
     }
 
     public ValueTask<bool> SetPositionAsync(double positionMs)
     {
-        this.MediaPlayer.Time = (long)positionMs;
+        if (this.CurrentMediaPlayer == null)
+            return ValueTask.FromResult(false);
+        this.CurrentMediaPlayer.SeekTo(TimeSpan.FromMilliseconds(positionMs));
         return ValueTask.FromResult(true);
     }
 
     public ValueTask<bool> SetPositionAsync(TimeSpan position)
     {
-        this.MediaPlayer.Time = (long)position.TotalMilliseconds;
+        if (this.CurrentMediaPlayer == null)
+            return ValueTask.FromResult(false);
+        this.CurrentMediaPlayer.SeekTo(position);
         return ValueTask.FromResult(true);
     }
 
@@ -238,29 +206,33 @@ public class LibVLCChannel : IMediaChannel, IVideoChannel, IChannelSupportsAudio
 
     public ValueTask<TimeSpan?> GetLengthAsync()
     {
-        var len = this.MediaPlayer.Length;
+        if (this.CurrentMediaPlayer == null || this.CurrentMedia == null)
+            return new ValueTask<TimeSpan?>(TimeSpan.Zero);
+        
+        var len = this.CurrentMedia.Duration;
         return ValueTask.FromResult<TimeSpan?>(TimeSpan.FromMilliseconds(len));
     }
-
-    public ValueTask<bool> DestroyAsync()
+    
+    public ValueTask<bool> SetExternalVideoSurfaceAsync(IExternalPlayerSurface surface)
     {
-        this.MediaPlayer.Dispose();
-        this.LibVLCInstance.Dispose();
+        if (this.ExternalVideoSurface == surface)
+            return ValueTask.FromResult(true);
+        
+        if (surface is not IVLCVideoControl vlcControl)
+            return ValueTask.FromResult(false);
+        
+        this.ExternalVideoSurface = vlcControl;
+        this.CurrentMediaPlayer = vlcControl.MediaPlayer;
+        this.ExternalVideoSurfaceChanged?.InvokeAndForget(this, new ExternalPlayerSurfaceChangedEventArgs(surface));
         return ValueTask.FromResult(true);
     }
 
-    public ValueTask<TView> CreateExternalVideoSurfaceAsync<TView>(string? name = null)
-        where TView : class, IExternalPlayerSurface
-    {
-        var surfName = name ?? this.MediaItem.PathTitle;
-        var view = TView.CreateSurface(this, surfName);
-        if (view is null)
-            throw new InvalidOperationException("Failed to create external video surface");
-        this.ExternalVideoSurface = view;
-        this.ExternalVideoSurfaceCreated?.Invoke(this, new ExternalPlayerSurfaceChangedEventArgs(view));
-        return new ValueTask<TView>((TView)view);
-    }
 
+    public ValueTask<bool> DestroyAsync()
+    {
+        this.CurrentMedia?.Dispose();
+        return ValueTask.FromResult(true);
+    }
 
     public ValueTask DisposeAsync()
     {
@@ -277,7 +249,8 @@ public class LibVLCChannel : IMediaChannel, IVideoChannel, IChannelSupportsAudio
         if (string.IsNullOrWhiteSpace(path))
             return false;
         var uri = new Uri(path);
-        this.MediaPlayer.AddSlave(MediaSlaveType.Audio, uri.AbsoluteUri, true);
+        if (this.CurrentMediaPlayer != null)
+            this.CurrentMediaPlayer.AddSlave(MediaSlaveType.Audio, uri.AbsoluteUri, true);
         this.AudioSlaves.Add(audioItem);
         this.AudioSlaveAdded?.InvokeAndForget(this, new ChannelAudioSlaveAddedEventArgs(audioItem));
         return true;
@@ -285,6 +258,16 @@ public class LibVLCChannel : IMediaChannel, IVideoChannel, IChannelSupportsAudio
 
     public ValueTask<bool> RemoveAudioSlaveAsync(AudioItem audioItem)
     {
-        throw new NotImplementedException();
+        var path = audioItem.GetCachePathAsync().Result;
+        if (string.IsNullOrWhiteSpace(path))
+            return ValueTask.FromResult(false);
+        var uri = new Uri(path);
+        if (this.CurrentMediaPlayer != null)
+        {
+            //TODO: Find a way to remove the slave
+        }
+        this.AudioSlaves.Remove(audioItem);
+        this.AudioSlaveRemoved?.InvokeAndForget(this, new ChannelAudioSlaveRemovedEventArgs(audioItem));
+        return ValueTask.FromResult(true);
     }
 }

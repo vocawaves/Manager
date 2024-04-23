@@ -119,6 +119,22 @@ public class YouTubeDataService : IStreamingServiceSource, IAudioDataSource, IVi
     public async ValueTask<bool> CachePlayItemAsync(MediaItem item)
     {
         item.SetCacheState(CacheState.Caching);
+        
+        
+        var cacheNameExtension = item switch
+        {
+            AudioItem => "mcia",
+            VideoItem => "mciv",
+            _ => throw new ArgumentOutOfRangeException(nameof(item))
+        };
+        var cacheName = $"{item.OwnerId}_{item.PathTitle}.{cacheNameExtension}";
+        var alreadyCached = await _cacheStrategy.CheckForOldCacheAsync(item, cacheName);
+        if (alreadyCached)
+        {
+            this._logger?.LogDebug("{PathTitle} is already cached", item.PathTitle);
+            return true;
+        }
+        
         IStreamInfo streamInfo;
         var manifest = await _youtubeClient.Videos.Streams.GetManifestAsync(item.SourcePath);
         this._logger?.LogDebug("Got manifest for {PathTitle}", item.PathTitle);
@@ -149,13 +165,6 @@ public class YouTubeDataService : IStreamingServiceSource, IAudioDataSource, IVi
         this._logger?.LogInformation("{PathTitle} has been cached to MemoryStream", item.PathTitle);
         var mimeType = MimeGuesser.GuessMimeType(ms.GetBuffer()); 
         item.MimeType = mimeType;
-        var cacheNameExtension = item switch
-        {
-            AudioItem => "mcia",
-            VideoItem => "mciv",
-            _ => throw new ArgumentOutOfRangeException(nameof(item))
-        };
-        var cacheName = $"{item.OwnerId}_{item.PathTitle}.{cacheNameExtension}";
         this._logger?.LogDebug("Saving {PathTitle} to {CacheName}", item.PathTitle, cacheName);
         return await _cacheStrategy.CacheAsync(item, ms, cacheName);
     }

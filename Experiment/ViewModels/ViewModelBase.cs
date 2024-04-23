@@ -1,6 +1,6 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 
-namespace SandBoxUI.ViewModels;
+namespace Experiment.ViewModels;
 
 public class ViewModelBase : ObservableObject
 {

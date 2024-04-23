@@ -19,7 +19,20 @@ public class BasicCacheStrategy : ICacheStrategy
         if (!Directory.Exists(_cacheDirectory))
             Directory.CreateDirectory(_cacheDirectory);
     }
-    
+
+    public ValueTask<bool> CheckForOldCacheAsync(MediaItem mediaItem, string cacheName)
+    {
+        if (this._cachedItems.ContainsKey(mediaItem))
+            return ValueTask.FromResult(true);
+        
+        var cachePath = Path.Combine(_cacheDirectory, cacheName);
+        if (!File.Exists(cachePath)) 
+            return ValueTask.FromResult(false);
+        this._cachedItems.Add(mediaItem, cachePath);
+        mediaItem.SetCacheProgress(100);
+        mediaItem.SetCacheState(CacheState.Cached);
+        return ValueTask.FromResult(true);
+    }
     public async ValueTask<bool> CacheAsync(MediaItem mediaItem, byte[] data, string cacheName)
     {
         if (this._cachedItems.ContainsKey(mediaItem))

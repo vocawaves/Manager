@@ -1,4 +1,4 @@
-﻿using LibVLCSharp.Shared;
+﻿using LibVLCSharp;
 using Manager.Shared.Entities;
 using Manager.Shared.Enums;
 using Manager.Shared.Events.Audio;
@@ -74,15 +74,7 @@ public class LibVLCBackend : IVideoBackendService, IAudioBackendService
         if (cachePath == null)
             throw new Exception("Failed to get cache path for video item");
 
-        var channelLibVLC = new LibVLC();
-        var channelMediaPlayer = new MediaPlayer(channelLibVLC);
-        var media = new Media(channelLibVLC, cachePath);
-        var parseState = await media.Parse();
-        if (parseState != MediaParsedStatus.Done)
-            throw new Exception("Failed to parse media");
-
-        channelMediaPlayer.Media = media;
-        var channel = new LibVLCChannel(this, item, channelLibVLC, channelMediaPlayer, media);
+        var channel = new LibVLCChannel(this, item);
         return channel;
     }
 

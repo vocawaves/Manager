@@ -1,11 +1,12 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <OutputType>WinExe</OutputType>
+        <OutputType>Exe</OutputType>
         <TargetFramework>net8.0</TargetFramework>
         <Nullable>enable</Nullable>
         <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
         <ApplicationManifest>app.manifest</ApplicationManifest>
         <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+        <PublishAot>true</PublishAot>
     </PropertyGroup>
 
     <ItemGroup>
@@ -20,23 +21,14 @@
         <PackageReference Include="Avalonia.Fonts.Inter" Version="11.1.0-beta1" />
         <!--Condition below is needed to remove Avalonia.Diagnostics package from build output in Release configuration.-->
         <PackageReference Condition="'$(Configuration)' == 'Debug'" Include="Avalonia.Diagnostics" Version="11.1.0-beta1" />
-        <PackageReference Include="Avalonia.ReactiveUI" Version="11.1.0-beta1" />
+        <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2" />
+        <PackageReference Include="LibVLCSharp" Version="3.8.2" />
         <PackageReference Include="VideoLAN.LibVLC.Windows" Version="3.0.20" />
     </ItemGroup>
 
     <ItemGroup>
       <ProjectReference Include="..\Manager.BassPlayer\Manager.BassPlayer.csproj" />
-      <ProjectReference Include="..\Manager.LibMPVPlayer.Avalonia\Manager.LibMPVPlayer.Avalonia.csproj" />
-      <ProjectReference Include="..\Manager.LibMPVPlayer\Manager.LibMPVPlayer.csproj" />
-      <ProjectReference Include="..\Manager.LibVLCPlayer.Avalonia\Manager.LibVLCPlayer.Avalonia.csproj" />
-      <ProjectReference Include="..\Manager.LibVLCPlayer\Manager.LibVLCPlayer.csproj" />
       <ProjectReference Include="..\Manager.LocalDataService\Manager.LocalDataService.csproj" />
       <ProjectReference Include="..\Manager.YouTubeDataService\Manager.YouTubeDataService.csproj" />
-    </ItemGroup>
-
-    <ItemGroup>
-      <None Update="libmpv-2.dll">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </None>
     </ItemGroup>
 </Project>

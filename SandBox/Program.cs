@@ -1,5 +1,4 @@
 ﻿using System.Diagnostics;
-using LibVLCSharp.Shared;
 using Manager.BassPlayer;
 using Manager.LocalDataService;
 using Manager.Shared.Interfaces.Data;

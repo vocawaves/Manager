@@ -70,7 +70,8 @@ public partial class MainViewModel : ViewModelBase
             "https://www.youtube.com/watch?v=tpodtZo5HRg",
             "https://www.youtube.com/watch?v=zxKVW3mNf_8",
             "https://www.youtube.com/watch?v=LaEgpNBt-bQ",
-            "https://www.youtube.com/watch?v=jPPiy_NKRzU"
+            "https://www.youtube.com/watch?v=jPPiy_NKRzU",
+            "https://www.youtube.com/watch?v=hE2jLYw7GgM"
         };
         
         foreach (var youtube in youtubeToGet)
