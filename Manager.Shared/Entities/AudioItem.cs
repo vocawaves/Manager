@@ -32,7 +32,7 @@ public class AudioItem : MediaItem
     public string? AlbumArtMimeType { get; }
 
     public AudioItem(IDataService dataService, ulong ownerId, string sourcePath, string pathTitle, string title,
-        string artist, TimeSpan duration, ILoggerFactory? lf = null) : base(dataService, ownerId, sourcePath, pathTitle, lf)
+        string artist, TimeSpan duration, ILogger<AudioItem>? logger = null) : base(dataService, ownerId, sourcePath, pathTitle, logger)
     {
         Title = title;
         Artist = artist;
@@ -40,8 +40,8 @@ public class AudioItem : MediaItem
     }
 
     public AudioItem(IDataService dataService, ulong ownerId, string sourcePath, string pathTitle, string title,
-        string artist, TimeSpan duration, byte[] albumArt, string albumArtMimeType,ILoggerFactory? lf = null) : base(dataService, ownerId,
-        sourcePath, pathTitle, lf)
+        string artist, TimeSpan duration, byte[] albumArt, string albumArtMimeType, ILogger<AudioItem>? logger = null) : base(dataService, ownerId,
+        sourcePath, pathTitle, logger)
     {
         Title = title;
         Artist = artist;

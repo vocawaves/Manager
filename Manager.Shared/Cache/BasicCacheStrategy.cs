@@ -12,9 +12,9 @@ public class BasicCacheStrategy : ICacheStrategy
     private readonly Dictionary<MediaItem, string> _cachedItems = new();
     private readonly ILogger<BasicCacheStrategy>? _logger;
 
-    public BasicCacheStrategy(ILoggerFactory? lf = null)
+    public BasicCacheStrategy(ILogger<BasicCacheStrategy>? logger = null)
     {
-        _logger = lf?.CreateLogger<BasicCacheStrategy>();
+        _logger = logger;
         _cacheDirectory = Path.Combine(Directory.GetCurrentDirectory(), "ManagerCache");
         if (!Directory.Exists(_cacheDirectory))
             Directory.CreateDirectory(_cacheDirectory);

@@ -12,6 +12,7 @@ public class SubtitleItem : MediaItem
     /// Name of the subtitle item.
     /// </summary>
     public string Name { get; }
+
     /// <summary>
     /// Language of the subtitle item.
     /// </summary>
@@ -23,7 +24,8 @@ public class SubtitleItem : MediaItem
     public TimeSpan Duration { get; }
 
     public SubtitleItem(IDataService dataService, ulong id, string sourcePath, string pathTitle, string name,
-        string? language, TimeSpan duration,ILoggerFactory? lf = null) : base(dataService, id, sourcePath, pathTitle, lf)
+        string? language, TimeSpan duration, ILogger<SubtitleItem> logger) : base(dataService, id, sourcePath,
+        pathTitle, logger)
     {
         this.Name = name;
         this.Language = language;

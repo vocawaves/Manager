@@ -37,4 +37,9 @@ public interface IManagerComponent
     /// Initializes the component.
     /// </summary>
     public ValueTask<bool> InitializeAsync(params string[] options);
+
+    /// <summary>
+    /// Creates a new instance of the component.
+    /// </summary>
+    public static abstract IManagerComponent Create(Instancer instancer, string name, ulong parent);
 }

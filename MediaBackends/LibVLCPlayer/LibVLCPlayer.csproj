@@ -1,0 +1,20 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net8.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <RootNamespace>Manager.MediaBackends.LibVLCPlayer</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="$(SolutionDir)\Manager.Shared\Manager.Shared.csproj" />
+      <ProjectReference Include="$(SolutionDir)\Manager.Shared\Manager.Shared.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="LibVLCSharp" Version="3.8.2" />
+      <PackageReference Include="VideoLAN.LibVLC.Windows" Version="3.0.20" />
+    </ItemGroup>
+
+</Project>

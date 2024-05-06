@@ -17,5 +17,4 @@ public interface IExternalPlayerSurface
     /// </summary>
     public IntPtr? GetNativeReference();
 
-    public ValueTask<bool> PrepareVideoAsync(IVideoChannel channel);
 }

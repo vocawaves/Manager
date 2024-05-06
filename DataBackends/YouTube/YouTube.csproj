@@ -1,0 +1,19 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net8.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <RootNamespace>Manager.DataBackends.YouTube</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="$(SolutionDir)\Manager.Shared\Manager.Shared.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Mime" Version="3.6.0" />
+      <PackageReference Include="YoutubeExplode" Version="6.3.14" />
+    </ItemGroup>
+
+</Project>

@@ -24,15 +24,15 @@ public class VideoItem : MediaItem
     public string? ThumbnailMimeType { get; }
 
     public VideoItem(IDataService source, ulong ownerId, string sourcePath, string pathTitle,
-        TimeSpan duration, ILoggerFactory? lf = null) : base(source, ownerId, sourcePath, pathTitle, lf)
+        TimeSpan duration, ILogger<VideoItem> logger) : base(source, ownerId, sourcePath, pathTitle, logger)
     {
         Duration = duration;
     }
 
     public VideoItem(IDataService source, ulong ownerId, string sourcePath, string pathTitle,
         TimeSpan duration,
-        byte[] thumbnailData, string thumbnailMimeType, ILoggerFactory? lf = null) : base(source, ownerId, sourcePath,
-        pathTitle, lf)
+        byte[] thumbnailData, string thumbnailMimeType, ILogger<VideoItem> logger) : base(source, ownerId, sourcePath,
+        pathTitle, logger)
     {
         Duration = duration;
         ThumbnailData = thumbnailData;

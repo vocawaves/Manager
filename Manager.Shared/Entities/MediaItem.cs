@@ -79,9 +79,9 @@ public class MediaItem : IAsyncDisposable
     
     private readonly ILogger<MediaItem>? _logger;
     
-    public MediaItem(IDataService dataService, ulong ownerId, string sourcePath, string pathTitle, ILoggerFactory? lf = null)
+    public MediaItem(IDataService dataService, ulong ownerId, string sourcePath, string pathTitle, ILogger<MediaItem>? logger = null)
     {
-        _logger = lf?.CreateLogger<MediaItem>();
+        _logger = logger;
         DataService = dataService;
         OwnerId = ownerId;
         SourcePath = sourcePath;
