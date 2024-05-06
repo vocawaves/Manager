@@ -20,7 +20,7 @@ public class VLCVideoControl : NativeControlHost, IVLCVideoControl
 
     public static readonly DirectProperty<VLCVideoControl, string> SurfaceNameProperty =
         AvaloniaProperty.RegisterDirect<VLCVideoControl, string>(
-            "SurfaceName", o => o.SurfaceName, (o, v) => o.SurfaceName = v);
+            nameof(SurfaceName), o => o.SurfaceName, (o, v) => o.SurfaceName = v);
 
     public string SurfaceName
     {
