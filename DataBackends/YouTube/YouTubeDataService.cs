@@ -15,100 +15,87 @@ using YoutubeExplode.Videos.Streams;
 
 namespace Manager.DataBackends.YouTube;
 
-public class YouTubeDataService : IStreamingServiceSource, IAudioDataSource, IVideoDataSource
+public class YouTubeDataService : ManagerComponent, IStreamingServiceSource, IAudioDataSource, IVideoDataSource
 {
-    public event AsyncEventHandler<InitSuccessEventArgs>? InitSuccess;
-    public event AsyncEventHandler<InitFailedEventArgs>? InitFailed;
-
-    public bool Initialized { get; } = true;
-    public string Name { get; }
-    public ulong Parent { get; }
 
     private readonly ILogger<YouTubeDataService>? _logger;
     private readonly ICacheStrategy _cacheStrategy;
     private readonly YoutubeClient _youtubeClient;
     private readonly HttpClient _httpClient;
-    private readonly Instancer _instancer;
 
-    private YouTubeDataService(Instancer instancer, string name, ulong parent)
+    private YouTubeDataService(ComponentManager componentManager, string name, ulong parent, IComponentConfiguration? config = null) : base(componentManager, name, parent, config)
     {
-        _instancer = instancer;
-        _cacheStrategy = new BasicCacheStrategy(instancer.CreateLogger<BasicCacheStrategy>());
-        _logger = instancer.CreateLogger<YouTubeDataService>();
-        Name = name;
-        Parent = parent;
-        _youtubeClient = new YoutubeClient();
-        _httpClient = new HttpClient();
-    }
-
-    public static IManagerComponent Create(Instancer instancer, string name, ulong parent)
-    {
-        return new YouTubeDataService(instancer, name, parent);
-    }
-
-
-    public async ValueTask<AudioItem?> GetAudioItemAsync(string uri)
-    {
-        var videoId = VideoId.TryParse(uri);
-        if (videoId is null)
+        this._logger = componentManager.CreateLogger<YouTubeDataService>();
+        if (config is not YouTubeDataServiceConfiguration youtubeConfig || youtubeConfig.CacheStrategy is null)
         {
-            _logger?.LogError("Failed to parse video id from uri {Uri}", uri);
-            return null;
+            this._logger?.LogInformation("No configuration provided for {Name}", name);
+            _cacheStrategy = new FolderCacheStrategy(componentManager.CreateLogger<FolderCacheStrategy>());
         }
-
-        var video = await _youtubeClient.Videos.GetAsync(videoId.Value);
-        this._logger?.LogDebug("Got video {Title} by {Author}", video.Title, video.Author.ChannelTitle);
-        var thumbnailUrl = video.Thumbnails.GetWithHighestResolution();
-        var thumbnailData = await _httpClient.GetByteArrayAsync(thumbnailUrl.Url);
-        var thumbnailMimeType = MimeGuesser.GuessMimeType(thumbnailData);
-        var audioItem = new AudioItem(this, Parent, uri, videoId, video.Title, video.Author.ChannelTitle,
-            video.Duration ?? TimeSpan.Zero, thumbnailData, thumbnailMimeType,
-            this._instancer.CreateLogger<AudioItem>());
-        return audioItem;
-    }
-
-    public async ValueTask<VideoItem?> GetVideoItemAsync(string uri)
-    {
-        var videoId = VideoId.TryParse(uri);
-        if (videoId is null)
+        else
         {
-            _logger?.LogError("Failed to parse video id from uri {Uri}", uri);
-            return null;
+            this._logger?.LogInformation("Using provided configuration for {Name}", name);
+            _cacheStrategy = youtubeConfig.CacheStrategy;
         }
-
-        var video = await _youtubeClient.Videos.GetAsync(videoId.Value);
-        this._logger?.LogDebug("Got video {Title} by {Author}", video.Title, video.Author.ChannelTitle);
-        var thumbnailUrl = video.Thumbnails.GetWithHighestResolution();
-        var thumbnailData = await _httpClient.GetByteArrayAsync(thumbnailUrl.Url);
-        var thumbnailMimeType = MimeGuesser.GuessMimeType(thumbnailData);
-        var videoItem = new VideoItem(this, Parent, uri, videoId, video.Duration ?? TimeSpan.Zero, thumbnailData,
-            thumbnailMimeType, this._instancer.CreateLogger<VideoItem>());
-        return videoItem;
+        this._youtubeClient = new YoutubeClient();
+        this._httpClient = new HttpClient();
     }
 
-    public ValueTask<SubtitleItem?> GetSubtitleItemAsync(string uri)
-    {
-        throw new NotImplementedException();
-    }
-
-    public ValueTask<AudioItem[]?> GetAudioItemPlaylistAsync(string uri)
-    {
-        throw new NotImplementedException();
-    }
-
-    public ValueTask<VideoItem[]?> GetVideoItemPlaylistAsync(string uri)
-    {
-        throw new NotImplementedException();
-    }
-
-    public ValueTask<SubtitleItem[]?> GetSubtitleItemPlaylistAsync(string uri)
-    {
-        throw new NotImplementedException();
-    }
-
-    public ValueTask<bool> InitializeAsync(params string[] options)
+    public override ValueTask<bool> InitializeAsync(params string[] options)
     {
         return ValueTask.FromResult(true);
+    }
+
+    public async ValueTask<MediaItem?> GetAudioItemAsync(string uri)
+    {
+        var videoId = VideoId.TryParse(uri);
+        if (videoId is null)
+        {
+            _logger?.LogError("Failed to parse video id from uri {Uri}", uri);
+            return null;
+        }
+
+        throw new NotImplementedException();
+        //var video = await _youtubeClient.Videos.GetAsync(videoId.Value);
+        //this._logger?.LogDebug("Got video {Title} by {Author}", video.Title, video.Author.ChannelTitle);
+        //var thumbnailUrl = video.Thumbnails.GetWithHighestResolution();
+        //var thumbnailData = await _httpClient.GetByteArrayAsync(thumbnailUrl.Url);
+        //var thumbnailMimeType = MimeGuesser.GuessMimeType(thumbnailData);
+        //var audioItem = new AudioItem(this, Parent, uri, videoId, video.Title, video.Author.ChannelTitle,
+        //    video.Duration ?? TimeSpan.Zero, thumbnailData, thumbnailMimeType,
+        //    this._instancer.CreateLogger<AudioItem>());
+        //return audioItem;
+    }
+
+    public async ValueTask<MediaItem?> GetVideoItemAsync(string uri)
+    {
+        var videoId = VideoId.TryParse(uri);
+        if (videoId is null)
+        {
+            _logger?.LogError("Failed to parse video id from uri {Uri}", uri);
+            return null;
+        }
+        
+        throw new NotImplementedException();
+    }
+
+    public ValueTask<MediaItem?> GetSubtitleItemAsync(string uri)
+    {
+        throw new NotImplementedException();
+    }
+
+    public ValueTask<MediaItem[]?> GetAudioItemPlaylistAsync(string uri)
+    {
+        throw new NotImplementedException();
+    }
+
+    public ValueTask<MediaItem[]?> GetVideoItemPlaylistAsync(string uri)
+    {
+        throw new NotImplementedException();
+    }
+
+    public ValueTask<MediaItem[]?> GetSubtitleItemPlaylistAsync(string uri)
+    {
+        throw new NotImplementedException();
     }
 
     public ValueTask<MediaItem[]?> GetPlaylistAsync(string url, ItemType type, int limit = 0)
@@ -126,60 +113,9 @@ public class YouTubeDataService : IStreamingServiceSource, IAudioDataSource, IVi
         throw new NotImplementedException();
     }
 
-    public async ValueTask<bool> CachePlayItemAsync(MediaItem item)
+    public ValueTask<bool> RemoveMediaItemFromCacheAsync(MediaItem item)
     {
-        item.SetCacheState(CacheState.Caching);
-
-
-        var cacheNameExtension = item switch
-        {
-            AudioItem => "mcia",
-            VideoItem => "mciv",
-            _ => throw new ArgumentOutOfRangeException(nameof(item))
-        };
-        var cacheName = $"{item.OwnerId}_{item.PathTitle}.{cacheNameExtension}";
-        var alreadyCached = await _cacheStrategy.CheckForOldCacheAsync(item, cacheName);
-        if (alreadyCached)
-        {
-            this._logger?.LogDebug("{PathTitle} is already cached", item.PathTitle);
-            return true;
-        }
-
-        IStreamInfo streamInfo;
-        var manifest = await _youtubeClient.Videos.Streams.GetManifestAsync(item.SourcePath);
-        this._logger?.LogDebug("Got manifest for {PathTitle}", item.PathTitle);
-        switch (item)
-        {
-            case AudioItem:
-                streamInfo = manifest.GetAudioOnlyStreams().GetWithHighestBitrate();
-                this._logger?.LogDebug("Got audio stream for {PathTitle}, bitrate: {Bitrate}", item.PathTitle,
-                    streamInfo.Bitrate);
-                break;
-            case VideoItem:
-                streamInfo = manifest.GetVideoStreams().GetWithHighestVideoQuality();
-                this._logger?.LogDebug("Got video stream for {PathTitle}, size: {Size}", item.PathTitle,
-                    streamInfo.Size);
-                break;
-            default:
-                this._logger?.LogError("Unknown item type {ItemType}", item.GetType().Name);
-                item.SetCacheState(CacheState.Failed);
-                return false;
-        }
-
-        using var ms = new MemoryStream();
-        _logger?.LogInformation("Caching {PathTitle} to MemoryStream", item.PathTitle);
-        await _youtubeClient.Videos.Streams.CopyToAsync(streamInfo, ms,
-            new Progress<double>((progress) => { item.SetCacheProgress(progress * 100); }));
-        this._logger?.LogInformation("{PathTitle} has been cached to MemoryStream", item.PathTitle);
-        var mimeType = MimeGuesser.GuessMimeType(ms.GetBuffer());
-        item.MimeType = mimeType;
-        this._logger?.LogDebug("Saving {PathTitle} to {CacheName}", item.PathTitle, cacheName);
-        return await _cacheStrategy.CacheAsync(item, ms, cacheName);
-    }
-
-    public ValueTask<bool> RemoveFromCacheAsync(MediaItem item)
-    {
-        return this._cacheStrategy.RemoveAsync(item);
+        throw new NotImplementedException();
     }
 
     public ValueTask<string?> GetCachedMediaItemPathAsync(MediaItem item)
@@ -190,5 +126,15 @@ public class YouTubeDataService : IStreamingServiceSource, IAudioDataSource, IVi
     public ValueTask<Stream?> GetCachedMediaItemStreamAsync(MediaItem item)
     {
         return this._cacheStrategy.GetCachedStreamAsync(item);
+    }
+
+    public ValueTask<bool> RemoveFromCacheAsync(MediaItem item)
+    {
+        return this._cacheStrategy.RemoveAsync(item);
+    }
+
+    public ValueTask<bool> CacheMediaItemAsync(MediaItem item)
+    {
+        throw new NotImplementedException();
     }
 }

@@ -22,17 +22,17 @@ public interface IChannelSupportsAudioSlaves
     /// <summary>
     /// This channel's audio slaves. Should only be managed by the channel.
     /// </summary>
-    public List<AudioItem> AudioSlaves { get; } //TODO: make this something that cant be modified from outside
+    public List<MediaItem> AudioSlaves { get; } //TODO: make this something that cant be modified from outside
     
     /// <summary>
     /// Adds an audio slave to this channel.
     /// Also fires the <see cref="AudioSlaveAdded"/> event.
     /// </summary>
-    public ValueTask<bool> AddAudioSlaveAsync(AudioItem audioItem);
+    public ValueTask<bool> AddAudioSlaveAsync(MediaItem audioItem);
     /// <summary>
     /// Removes an audio slave from this channel.
     /// Also fires the <see cref="AudioSlaveRemoved"/> event.
     /// </summary>
-    public ValueTask<bool> RemoveAudioSlaveAsync(AudioItem audioItem);
+    public ValueTask<bool> RemoveAudioSlaveAsync(MediaItem audioItem);
     
 }

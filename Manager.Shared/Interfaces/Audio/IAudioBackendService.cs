@@ -25,11 +25,6 @@ public interface IAudioBackendService : IBackendService
     public event AsyncEventHandler<GlobalAudioDeviceChangedEventArgs>? GlobalDeviceChanged; 
     
     /// <summary>
-    /// Create a new audio channel for the given audio item.
-    /// </summary>
-    public ValueTask<IAudioChannel?> CreateChannelAsync(AudioItem item);
-    
-    /// <summary>
     /// Get all available audio devices this service can use.
     /// </summary>
     public ValueTask<AudioDevice[]> GetDevicesAsync();

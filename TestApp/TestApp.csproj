@@ -1,0 +1,20 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net8.0</TargetFramework>
+        <LangVersion>latest</LangVersion>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <PublishAot>true</PublishAot>
+        <InvariantGlobalization>true</InvariantGlobalization>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\DataBackends\Local\Local.csproj" />
+      <ProjectReference Include="..\Manager.Shared\Manager.Shared.csproj" />
+      <ProjectReference Include="..\Manager.SimplePlayer\Manager.SimplePlayer.csproj" />
+      <ProjectReference Include="..\MediaBackends\BassPlayer\BassPlayer.csproj" />
+    </ItemGroup>
+
+</Project>

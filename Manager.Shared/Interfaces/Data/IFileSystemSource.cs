@@ -1,4 +1,5 @@
 ﻿using Manager.Shared.Entities;
+using Manager.Shared.Enums;
 
 namespace Manager.Shared.Interfaces.Data;
 
@@ -22,5 +23,8 @@ public interface IFileSystemSource : IDataService
     /// Gets the directories in a directory.
     /// </summary>
     public ValueTask<DirectoryItem[]> GetDirectoriesAsync(string uri);
+    
+    public ValueTask<MediaItem?> GetMediaItemAsync(string uri, ItemType type = ItemType.Guess);
+    public ValueTask<MediaItem[]?> GetMediaItemsAsync(string uri, ItemType type = ItemType.Guess);
 
 }

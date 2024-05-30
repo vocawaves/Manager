@@ -11,11 +11,11 @@ public interface IDataService : IManagerComponent
     /// <summary>
     /// Cache the media item.
     /// </summary>
-    public ValueTask<bool> CachePlayItemAsync(MediaItem item);
+    public ValueTask<bool> CacheMediaItemAsync(MediaItem item);
     /// <summary>
     /// Remove the media item from the cache.
     /// </summary>
-    public ValueTask<bool> RemoveFromCacheAsync(MediaItem item);
+    public ValueTask<bool> RemoveMediaItemFromCacheAsync(MediaItem item);
     
     /// <summary>
     /// Get the cached path of the media item.

@@ -4,9 +4,9 @@ namespace Manager.Shared.Events.Audio;
 
 public class ChannelAudioSlaveRemovedEventArgs : EventArgs
 {
-    public AudioItem RemovedItem { get; }
+    public MediaItem RemovedItem { get; }
 
-    public ChannelAudioSlaveRemovedEventArgs(AudioItem removedItem)
+    public ChannelAudioSlaveRemovedEventArgs(MediaItem removedItem)
     {
         this.RemovedItem = removedItem;
     }

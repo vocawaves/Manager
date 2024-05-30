@@ -4,8 +4,8 @@ namespace Manager.Shared.Events.Subtitle;
 
 public class SubtitleSlaveAddedEventArgs
 {
-    public SubtitleItem SubtitleItem { get; }
-    public SubtitleSlaveAddedEventArgs(SubtitleItem subtitleItem)
+    public MediaItem SubtitleItem { get; }
+    public SubtitleSlaveAddedEventArgs(MediaItem subtitleItem)
     {
         this.SubtitleItem = subtitleItem;
     }

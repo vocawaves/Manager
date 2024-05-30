@@ -3,15 +3,12 @@ using Manager.Shared.Helpers;
 
 namespace Manager.Shared.Interfaces.General;
 
-/// <summary>
-/// Base interface for all manager components.
-/// </summary>
 public interface IManagerComponent
 {
     /// <summary>
     /// Fired when the component is successfully initialized.
     /// </summary>
-    public event AsyncEventHandler<InitSuccessEventArgs>? InitSuccess;
+    public event AsyncEventHandler? InitSuccess;
     /// <summary>
     /// Fired when the component failed to initialize.
     /// </summary>
@@ -21,7 +18,12 @@ public interface IManagerComponent
     /// Is the component initialized?
     /// </summary>
     public bool Initialized { get; }
-    
+
+    /// <summary>
+    /// The instancer that created this component.
+    /// </summary>
+    public ComponentManager ComponentManager { get; }
+
     /// <summary>
     /// Name of the component.
     /// </summary>
@@ -34,12 +36,13 @@ public interface IManagerComponent
     public ulong Parent { get; }
 
     /// <summary>
-    /// Initializes the component.
+    /// Component configuration, if any.
     /// </summary>
-    public ValueTask<bool> InitializeAsync(params string[] options);
+    public IComponentConfiguration? Configuration { get; }
 
     /// <summary>
-    /// Creates a new instance of the component.
+    /// Initializes the component.
     /// </summary>
-    public static abstract IManagerComponent Create(Instancer instancer, string name, ulong parent);
+    public abstract ValueTask<bool> InitializeAsync(params string[] options);
+
 }

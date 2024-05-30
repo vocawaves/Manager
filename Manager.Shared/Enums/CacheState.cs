@@ -3,7 +3,7 @@
 public enum CacheState
 {
     NotCached,
-    Caching,
-    Cached,
-    Failed
+    Downloading,
+    DiskCaching,
+    Cached
 }

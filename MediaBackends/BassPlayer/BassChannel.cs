@@ -27,22 +27,25 @@ public class BassChannel : IAudioChannel
     public event AsyncEventHandler<ChannelDeviceChangedEventArgs>? ChannelDeviceChanged;
 
     public IBackendService AssociatedBackend { get; }
-    public AudioItem AudioItem { get; }
-    public MediaItem MediaItem => this.AudioItem;
+    public MediaItem MediaItem { get; }
     public List<PositionTrigger> PositionTriggers { get; } = new();
+    public TimeSpan? Position { get; private set; } = TimeSpan.Zero;
+    public TimeSpan? Length { get; private set; }
     private readonly Dictionary<PositionTrigger, int> _positionTriggerHandles = new();
 
     private readonly int _bassChannel;
     //private PeriodicTimer _positionTimer = new PeriodicTimer(TimeSpan.FromMilliseconds(10));
-    private Timer _positionTimer = new Timer(TimeSpan.FromMilliseconds(1000.0 / 60.0));
+    private readonly Timer _positionTimer = new Timer(TimeSpan.FromMilliseconds(1000.0 / 60.0));
 
-    public BassChannel(IBackendService associatedBackend, AudioItem audioItem,
+    public BassChannel(IBackendService associatedBackend, MediaItem mediaItem,
         int bassChannel, ILogger<BassChannel>? logger = null)
     {
         this._logger = logger;
         this._bassChannel = bassChannel;
+        var lengthInSeconds = Bass.ChannelBytes2Seconds(_bassChannel, Bass.ChannelGetLength(_bassChannel));
+        this.Length = TimeSpan.FromSeconds(lengthInSeconds);
         this.AssociatedBackend = associatedBackend;
-        this.AudioItem = audioItem;
+        this.MediaItem = mediaItem;
         SetupEvents();
         this.SetupPosition();
     }
@@ -52,7 +55,8 @@ public class BassChannel : IAudioChannel
         this._positionTimer.Elapsed += (sender, args) =>
         {
             var posAsSeconds = Bass.ChannelBytes2Seconds(_bassChannel, Bass.ChannelGetPosition(_bassChannel));
-            this.PositionChanged.InvokeAndForget(this, new ChannelPositionChangedEventArgs(TimeSpan.FromSeconds(posAsSeconds)));
+            this.Position = TimeSpan.FromSeconds(posAsSeconds);
+            this.PositionChanged.InvokeAndForget(this, new ChannelPositionChangedEventArgs(this.Position ?? TimeSpan.Zero));
         };
     }
 
@@ -63,6 +67,8 @@ public class BassChannel : IAudioChannel
             this.Ended?.InvokeAndForget(this, EventArgs.Empty);
             this.StateChanged?.InvokeAndForget(this, new ChannelStateChangedEventArgs(ChannelState.Ended));
             this._positionTimer.Stop();
+            var chanLength = Bass.ChannelBytes2Seconds(_bassChannel, Bass.ChannelGetLength(_bassChannel));
+            this.PositionChanged?.InvokeAndForget(this, new ChannelPositionChangedEventArgs(TimeSpan.FromSeconds(chanLength)));
             this._logger?.LogInformation("End sync for channel {channel} invoked", _bassChannel);
         }, IntPtr.Zero);
         if (syncHandle == 0)

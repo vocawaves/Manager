@@ -4,6 +4,7 @@ using Manager.Shared.Entities;
 using Manager.Shared.Enums;
 using Manager.Shared.Events.Audio;
 using Manager.Shared.Events.General;
+using Manager.Shared.Extensions;
 using Manager.Shared.Helpers;
 using Manager.Shared.Interfaces.Audio;
 using Manager.Shared.Interfaces.General;
@@ -11,41 +12,24 @@ using Microsoft.Extensions.Logging;
 
 namespace Manager.MediaBackends.BassPlayer;
 
-public class BassBackend : IAudioBackendService
+public class BassBackend : ManagerComponent, IAudioBackendService
 {
-    public event AsyncEventHandler<InitSuccessEventArgs>? InitSuccess;
-    public event AsyncEventHandler<InitFailedEventArgs>? InitFailed;
-
     public event AsyncEventHandler<GlobalDefaultVolumeChangedEventArgs>? GlobalVolumeChanged;
     public event AsyncEventHandler<GlobalAudioDeviceChangedEventArgs>? GlobalDeviceChanged;
 
-    public bool Initialized { get; private set; }
-    public string Name { get; }
-    public ulong Parent { get; }
-
     private readonly ILogger<BassBackend>? _logger;
-    private readonly Instancer _instancer;
 
-    private BassBackend(Instancer instancer, string name, ulong parent)
+    public BassBackend(ComponentManager componentManager, string name, ulong parent, IComponentConfiguration? configuration = null) : base(componentManager, name, parent, configuration)
     {
-        this._instancer = instancer;
-        this._logger = instancer.CreateLogger<BassBackend>();
-        this.Name = name;
-        this.Parent = parent;
+        this._logger = componentManager.CreateLogger<BassBackend>();
     }
 
-    public static IManagerComponent Create(Instancer instancer, string name, ulong parent)
-    {
-        return new BassBackend(instancer, name, parent);
-    }
-
-    public ValueTask<bool> InitializeAsync(params string[] options)
+    public override ValueTask<bool> InitializeAsync(params string[] options)
     {
         var bassInit = Bass.Init();
         if (!bassInit)
         {
-            this.InitFailed?.InvokeAndForget(this,
-                new InitFailedEventArgs(Bass.LastError.ToString()));
+            this.OnInitFailed(Bass.LastError.ToString());
             this._logger?.LogError("Failed to initialize Bass: {BassLastError}", Bass.LastError);
             return ValueTask.FromResult(false);
         }
@@ -70,7 +54,7 @@ public class BassBackend : IAudioBackendService
         }
 
         this.Initialized = true;
-        this.InitSuccess?.InvokeAndForget(this, new InitSuccessEventArgs($"Bass v{Bass.Version} initialized"));
+        this.OnInitSuccess($"Bass v{Bass.Version} initialized");
         this._logger?.LogInformation("BassBackend initialized");
         return ValueTask.FromResult(true);
     }
@@ -173,7 +157,7 @@ public class BassBackend : IAudioBackendService
         }
     }
 
-    public async ValueTask<IAudioChannel?> CreateChannelAsync(AudioItem mediaItem)
+    public async ValueTask<IMediaChannel?> CreateChannelAsync(MediaItem mediaItem)
     {
         if (!this.Initialized)
         {
@@ -190,36 +174,32 @@ public class BassBackend : IAudioBackendService
 
         try
         {
-            var cachePath = await mediaItem.GetCachePathAsync();
-            switch (cachePath)
+            var cachePath = await mediaItem.GetCachedPathAsync();
+            if (cachePath == null)
             {
-                case null:
-                    this._logger?.LogError("Failed to get cached stream for {mediaItem}", mediaItem);
-                    return default;
-                default:
-                {
-                    this._logger?.LogDebug("Using temporary MemoryStream for {mediaItem}", mediaItem);
-                    stream = Bass.CreateStream(cachePath, 0, 0,
-                        BassFlags.Default | BassFlags.Float);
-                    break;
-                }
+                this._logger?.LogError("Failed to get cached filePath for {mediaItem}", mediaItem.PathTitle);
+                return default;
             }
+
+            this._logger?.LogDebug("Creating stream for {audioItem}", mediaItem.PathTitle);
+            stream = Bass.CreateStream(cachePath, 0, 0,
+                BassFlags.Default | BassFlags.Float);
         }
         catch (Exception e)
         {
-            this._logger?.LogError(e, "Failed to create stream for {audioItem}", mediaItem);
+            this._logger?.LogError(e, "Failed to create stream for {audioItem}", mediaItem.PathTitle);
             return default;
         }
 
         if (stream == 0)
         {
-            this._logger?.LogError("Failed to create stream for {audioItem}: {BassLastError}", mediaItem,
+            this._logger?.LogError("Failed to create stream for {audioItem}: {BassLastError}", mediaItem.PathTitle,
                 Bass.LastError);
             return default;
         }
 
-        var channel = new BassChannel(this, mediaItem, stream, this._instancer.CreateLogger<BassChannel>());
-        this._logger?.LogInformation("Created channel for {SourcePath}", mediaItem.SourcePath);
+        var channel = new BassChannel(this, mediaItem, stream, this.ComponentManager.CreateLogger<BassChannel>());
+        this._logger?.LogInformation("Created channel for {SourcePath}", mediaItem.PathTitle);
         return channel;
     }
 

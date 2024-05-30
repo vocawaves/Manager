@@ -27,15 +27,15 @@ public interface IChannelSupportsSubtitleSlaves
     /// List of subtitle slaves.
     /// Should not be modified from the outside.
     /// </summary>
-    public List<SubtitleItem> SubtitleSlaves { get; }
+    public List<MediaItem> SubtitleSlaves { get; }
     /// <summary>
     /// Adds a subtitle slave to the channel.
     /// Also fires the <see cref="SubtitleSlaveAdded"/> event.
     /// </summary>
-    public ValueTask<bool> AddSubtitleSlaveAsync(SubtitleItem subtitleItem);
+    public ValueTask<bool> AddSubtitleSlaveAsync(MediaItem subtitleItem);
     /// <summary>
     /// Removes a subtitle slave from the channel.
     /// Also fires the <see cref="SubtitleSlaveRemoved"/> event.
     /// </summary>
-    public ValueTask<bool> RemoveSubtitleSlaveAsync(SubtitleItem subtitleItem);
+    public ValueTask<bool> RemoveSubtitleSlaveAsync(MediaItem subtitleItem);
 }

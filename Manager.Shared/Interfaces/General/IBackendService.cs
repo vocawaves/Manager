@@ -11,4 +11,9 @@ public interface IBackendService : IManagerComponent
     /// Checks if the media item is supported by the backend.
     /// </summary>
     public ValueTask<bool> IsMediaItemSupportedAsync(MediaItem mediaItem);
+    
+    /// <summary>
+    /// Creates a new video channel for the given video item.
+    /// </summary>
+    public ValueTask<IMediaChannel?> CreateChannelAsync(MediaItem item);
 }

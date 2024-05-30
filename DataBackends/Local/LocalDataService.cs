@@ -12,38 +12,29 @@ using Microsoft.Extensions.Logging;
 
 namespace Manager.DataBackends.Local;
 
-public class LocalDataService : IFileSystemSource, IAudioDataSource, IVideoDataSource, ISubtitleDataSource,
+public class LocalDataService : ManagerComponent, IFileSystemSource, IAudioDataSource, IVideoDataSource, ISubtitleDataSource,
     IImageDataSource, IMiscDataSource
 {
-    public event AsyncEventHandler<InitSuccessEventArgs>? InitSuccess;
-    public event AsyncEventHandler<InitFailedEventArgs>? InitFailed;
-    
-    public bool Initialized { get; } = true;
-    public string Name { get; }
-    public ulong Parent { get; }
-
-
     private readonly ILogger<LocalDataService>? _logger;
     private readonly ICacheStrategy _cacheStrategy;
-    private readonly Instancer _instancer;
 
-    private LocalDataService(Instancer instancer, string name, ulong parent)
+    public LocalDataService(ComponentManager componentManager, string name, ulong parent, IComponentConfiguration? configuration = null) : base(componentManager, name, parent, configuration)
     {
-        _instancer = instancer;
-        _cacheStrategy = new BasicCacheStrategy(instancer.CreateLogger<BasicCacheStrategy>());
-        _logger = instancer.CreateLogger<LocalDataService>();
-        Name = name;
-        Parent = parent;
+        if (configuration is not LocalDataServiceConfiguration localConfig || localConfig.CacheStrategy is null)
+        {
+            var strategy = FolderCacheStrategy.Create(componentManager?.CreateLogger<FolderCacheStrategy>());
+            _cacheStrategy = strategy ?? throw new InvalidOperationException("Failed to create cache strategy");
+        }
+        else
+        {
+            _cacheStrategy = localConfig.CacheStrategy;
+        }
+        _logger = this.ComponentManager.CreateLogger<LocalDataService>();
     }
 
-    public ValueTask<bool> InitializeAsync(params string[] options)
+    public override ValueTask<bool> InitializeAsync(params string[] options)
     {
         return ValueTask.FromResult(true);
-    }
-
-    public static IManagerComponent Create(Instancer instancer, string name, ulong parent)
-    {
-        return new LocalDataService(instancer, name, parent);
     }
 
     public ValueTask<DirectoryItem[]> GetMountPointsAsync()
@@ -95,7 +86,7 @@ public class LocalDataService : IFileSystemSource, IAudioDataSource, IVideoDataS
         return ValueTask.FromResult(items);
     }
 
-    public async ValueTask<AudioItem?> GetAudioItemAsync(string uri)
+    public async ValueTask<MediaItem?> GetMediaItemAsync(string uri, ItemType type = ItemType.Guess)
     {
         if (!File.Exists(uri))
         {
@@ -103,127 +94,29 @@ public class LocalDataService : IFileSystemSource, IAudioDataSource, IVideoDataS
             return null;
         }
 
-        var mimeType = await GetMimeType(uri);
-        if (!mimeType.StartsWith("audio/"))
+        if (type == ItemType.Guess)
         {
-            this._logger?.LogWarning("File {0} is not an audio file, mime type: {1}", uri, mimeType);
-        }
-
-        var metadata = FfmpegReader.ReadMetaDataTags(uri);
-        var duration = FfmpegReader.GetDuration(uri);
-        var title = metadata.GetValueOrDefault("title", Path.GetFileNameWithoutExtension(uri));
-        var artist = metadata.GetValueOrDefault("artist", "Unknown");
-        var albumArt = await FfmpegReader.TryReadCoverArt(uri);
-        if (albumArt is null)
-        {
-            _logger?.LogInformation("No album art found for {0}", uri);
-            return new AudioItem(this, Parent, uri, Path.GetFileName(uri), title, artist, duration, _instancer.CreateLogger<AudioItem>())
-            {
-                MimeType = mimeType,
-                Metadata = metadata
-            };
+            var typeGuess = await GetMimeType(uri);
+            if (typeGuess.StartsWith("video/"))
+                type = ItemType.Video;
+            else if (typeGuess.StartsWith("audio/"))
+                type = ItemType.Audio;
+            else if (typeGuess.StartsWith("image/"))
+                type = ItemType.Image;
+            else if (typeGuess.StartsWith("text/"))
+                type = ItemType.Subtitle;
+            else
+                type = ItemType.Misc;
         }
         
-        var albumArtMimeType = MimeGuesser.GuessMimeType(albumArt);
-        return new AudioItem(this, Parent, uri, Path.GetFileName(uri), title, artist, duration, albumArt, albumArtMimeType, _instancer.CreateLogger<AudioItem>())
-        {
-            MimeType = mimeType,
-            Metadata = metadata
-        };
+        var pathTitle = Path.GetFileNameWithoutExtension(uri);
+        var item = new MediaItem(this, type, Parent, uri, pathTitle, this.ComponentManager.CreateLogger<MediaItem>());
+        return item;
     }
 
-    public ValueTask<VideoItem?> GetVideoItemAsync(string uri)
+    public ValueTask<MediaItem[]?> GetMediaItemsAsync(string uri, ItemType type = ItemType.Guess)
     {
         throw new NotImplementedException();
-    }
-
-    public ValueTask<SubtitleItem?> GetSubtitleItemAsync(string uri)
-    {
-        throw new NotImplementedException();
-    }
-
-    public ValueTask<ImageItem?> GetImageItemAsync(string uri)
-    {
-        throw new NotImplementedException();
-    }
-
-    public ValueTask<MediaItem?> GetMiscItemAsync(string uri)
-    {
-        throw new NotImplementedException();
-    }
-
-    public ValueTask<AudioItem[]?> GetAudioItemPlaylistAsync(string uri)
-    {
-        throw new NotImplementedException();
-    }
-
-    public ValueTask<VideoItem[]?> GetVideoItemPlaylistAsync(string uri)
-    {
-        throw new NotImplementedException();
-    }
-
-    public ValueTask<SubtitleItem[]?> GetSubtitleItemPlaylistAsync(string uri)
-    {
-        throw new NotImplementedException();
-    }
-
-    public ValueTask<ImageItem[]?> GetImageItemPlaylistAsync(string uri)
-    {
-        throw new NotImplementedException();
-    }
-
-    public ValueTask<MediaItem[]?> GetMiscItemPlaylistAsync(string uri)
-    {
-        throw new NotImplementedException();
-    }
-
-    public async ValueTask<bool> CachePlayItemAsync(MediaItem item)
-    {
-        if (item.CacheState == CacheState.Cached)
-        {
-            _logger?.LogInformation("Item {0} is already cached", item.SourcePath);
-            return true;
-        }
-        
-        if (item.CacheState == CacheState.Caching)
-        {
-            _logger?.LogInformation("Item {0} is already being cached", item.SourcePath);
-            return true;
-        }
-        
-        if (!File.Exists(item.SourcePath))
-        {
-            _logger?.LogError("File not found: {0}", item.SourcePath);
-            return false;
-        }
-        
-        string itemCacheExtension = item switch
-        {
-            AudioItem => "mcia",
-            VideoItem => "mciv",
-            SubtitleItem => "mcis",
-            ImageItem => "mcii",
-            _ => "mcig"
-        };
-
-        item.SetCacheState(CacheState.Caching);
-        var cacheName = $"{item.OwnerId}_{item.PathTitle}.{itemCacheExtension}";
-        return await this._cacheStrategy.CacheAsync(item, item.SourcePath, cacheName);
-    }
-
-    public ValueTask<bool> RemoveFromCacheAsync(MediaItem item)
-    {
-        return this._cacheStrategy.RemoveAsync(item);
-    }
-
-    public ValueTask<string?> GetCachedMediaItemPathAsync(MediaItem item)
-    {
-        return this._cacheStrategy.GetCachedPathAsync(item);
-    }
-
-    public ValueTask<Stream?> GetCachedMediaItemStreamAsync(MediaItem item)
-    {
-        return this._cacheStrategy.GetCachedStreamAsync(item);
     }
 
     private async ValueTask<string> GetMimeType(string uri)
@@ -240,5 +133,50 @@ public class LocalDataService : IFileSystemSource, IAudioDataSource, IVideoDataS
             _logger?.LogError(e, "Failed to guess mime type for {0}", uri);
             return "application/octet-stream";
         }
+    }
+
+    public async ValueTask<bool> CacheMediaItemAsync(MediaItem item)
+    {
+        if (item.ItemType == ItemType.Guess)
+        {
+            _logger?.LogError("Cannot cache media item with ItemType.Guess");
+            return false;
+        }
+
+        if (item.CacheState is CacheState.Cached or CacheState.DiskCaching or CacheState.Downloading)
+        {
+            _logger?.LogInformation("Media item already cached: {0}", item.SourcePath);
+            return true;
+        }
+
+        var cacheExtension = item.ItemType switch
+        {
+            ItemType.Video => ".mcv", //If its a Video and Audio and/or Subtitle, use the video extension (.mcv) as the cache extension
+            ItemType.Audio => ".mca", //If its only an Audio file, use the audio extension (.mca) as the cache extension
+            ItemType.Subtitle => ".mcs", //If its only a Subtitle file, use the subtitle extension (.mcs) as the cache extension
+            ItemType.Image => ".mci",
+            ItemType.Misc => ".mcm",
+            _ => throw new InvalidOperationException($"Invalid ItemType: {item.ItemType}, source path: {item.SourcePath}")
+        };
+        _logger?.LogInformation("Determined cache extension: {0}", cacheExtension);
+        var cacheName = $"{item.PathTitle}{cacheExtension}";
+        _logger?.LogInformation("Using cache name: {0}", cacheName);
+        await _cacheStrategy.CacheAsync(item, item.SourcePath, cacheName);
+        return true;
+    }
+
+    public ValueTask<bool> RemoveMediaItemFromCacheAsync(MediaItem item)
+    {
+        return _cacheStrategy.RemoveAsync(item);
+    }
+
+    public ValueTask<string?> GetCachedMediaItemPathAsync(MediaItem item)
+    {
+        return _cacheStrategy.GetCachedPathAsync(item);
+    }
+
+    public ValueTask<Stream?> GetCachedMediaItemStreamAsync(MediaItem item)
+    {
+        return _cacheStrategy.GetCachedStreamAsync(item);
     }
 }

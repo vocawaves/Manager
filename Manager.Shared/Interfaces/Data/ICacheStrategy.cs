@@ -1,4 +1,6 @@
-﻿using Manager.Shared.Entities;
+﻿using Manager.Shared.Cache;
+using Manager.Shared.Entities;
+using Microsoft.Extensions.Logging;
 
 namespace Manager.Shared.Interfaces.Data;
 
@@ -11,7 +13,7 @@ public interface ICacheStrategy
     /// <summary>
     /// Check if the media item is already cached.
     /// </summary>
-    public ValueTask<bool> CheckForOldCacheAsync(MediaItem mediaItem, string cacheName);
+    public ValueTask<bool> CheckForExistingCacheAsync(MediaItem mediaItem, string cacheName);
     /// <summary>
     /// Cache the media item from a byte array.
     /// </summary>
@@ -39,6 +41,8 @@ public interface ICacheStrategy
     /// </summary>
     public ValueTask<Stream?> GetCachedStreamAsync(MediaItem mediaItem);
     
-    //TODO: Get a cached MediaItem as a byte array.
-    //TODO: Add a method to clear the cache.
+    public static virtual ICacheStrategy? Create(ILogger<ICacheStrategy>? logger = null, string[]? options = null)
+    {
+        return null;
+    }
 }

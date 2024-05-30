@@ -7,12 +7,4 @@ namespace Manager.Shared.Interfaces.Data;
 /// </summary>
 public interface IVideoDataSource
 {
-    /// <summary>
-    /// Gets a video item from the data source.
-    /// </summary>
-    public ValueTask<VideoItem?> GetVideoItemAsync(string uri);
-    /// <summary>
-    /// Gets multiple video items from the data source.
-    /// </summary>
-    public ValueTask<VideoItem[]?> GetVideoItemPlaylistAsync(string uri);
 }

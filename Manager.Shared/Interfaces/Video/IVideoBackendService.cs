@@ -11,10 +11,4 @@ namespace Manager.Shared.Interfaces.Video;
 /// </summary>
 public interface IVideoBackendService : IBackendService
 {
-    
-    /// <summary>
-    /// Creates a new video channel for the given video item.
-    /// </summary>
-    public ValueTask<IVideoChannel?> CreateChannelAsync(VideoItem item);
-    
 }

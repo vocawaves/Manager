@@ -9,7 +9,7 @@ namespace Manager.Shared.Entities;
 /// <summary>
 /// A standardized wrapper for media items.
 /// </summary>
-public class MediaItem : IAsyncDisposable
+public class MediaItem
 {
     /// <summary>
     /// Fired when the cache state of the media item changes.
@@ -35,144 +35,58 @@ public class MediaItem : IAsyncDisposable
     public event AsyncEventHandler? CacheFailed;
     
     /// <summary>
+    /// Type of the media item.
+    /// </summary>
+    public ItemType ItemType { get; }
+    
+    /// <summary>
     /// Source path of the media item. Can be a URL or a file path.
     /// </summary>
     public string SourcePath { get; }
+    
     /// <summary>
-    /// Owner ID of the media item. Unused for now (always 0)
+    /// Parent ID of the media item. Unused for now (always 0)
     /// For later remote management.
     /// </summary>
-    public ulong OwnerId { get; }
+    public ulong ParentId { get; }
+    
     /// <summary>
     /// Basic title of the media item. Usually the file name YouTube videoID for example.
     /// </summary>
     public string PathTitle { get; }
-    /// <summary>
-    /// Custom title of the media item. Can be set by the user.
-    /// </summary>
-    public string? CustomTitle { get; set; }
-    
-    /// <summary>
-    /// Mime type of the media item.
-    /// </summary>
-    public string? MimeType { get; set; }
 
     /// <summary>
     /// Cache state of the media item.
     /// </summary>
     public CacheState CacheState { get; private set; } = CacheState.NotCached;
-    /// <summary>
-    /// Cache progress of the media item. (0-100%)
-    /// </summary>
-    public double CacheProgress { get; private set; } = 0;
-    
-    /// <summary>
-    /// All metadata of the media item.
-    /// (may include duplicates)
-    /// </summary>
-    public Dictionary<string, string> Metadata { get; set; } = new();
     
     /// <summary>
     /// Data service this media item is associated with.
     /// </summary>
-    internal IDataService DataService { get; set; }
+    public IDataService DataService { get; }
     
     private readonly ILogger<MediaItem>? _logger;
     
-    public MediaItem(IDataService dataService, ulong ownerId, string sourcePath, string pathTitle, ILogger<MediaItem>? logger = null)
+    public MediaItem(IDataService dataService, ItemType itemType, ulong parentId, string sourcePath, string pathTitle, ILogger<MediaItem>? logger = null)
     {
         _logger = logger;
+        ItemType = itemType;
         DataService = dataService;
-        OwnerId = ownerId;
+        ParentId = parentId;
         SourcePath = sourcePath;
         PathTitle = pathTitle;
     }
     
-    /// <summary>
-    /// Sets the cache state of the media item.
-    /// Should be used by the data service/cache strategy.
-    /// </summary>
     public void SetCacheState(CacheState state)
     {
-        if (this.CacheState == state)
-        {
-            this._logger?.LogDebug("Cache state is already {State}", state);
-            return;
-        }
-        this._logger?.LogInformation("Cache state changed to {State}", state);
-        this.CacheState = state;
-        switch (state)
-        {
-            case CacheState.Cached:
-                this.Cached?.InvokeAndForget(this, EventArgs.Empty);
-                break;
-            case CacheState.NotCached:
-                this.RemovedFromCache?.InvokeAndForget(this, EventArgs.Empty);
-                break;
-            case CacheState.Failed:
-                this.CacheFailed?.InvokeAndForget(this, EventArgs.Empty);
-                break;
-        }
-        this.CacheStateChanged?.InvokeAndForget(this, new CacheStateChangedEventArgs(state));
+        CacheState = state;
+        CacheStateChanged?.InvokeAndForget(this, new CacheStateChangedEventArgs(state));
+        _logger?.LogDebug("Cache state of {PathTitle} changed to {CacheState}", PathTitle, state);
     }
     
-    /// <summary>
-    /// Sets the cache progress of the media item.
-    /// Should be used by the data service/cache strategy.
-    /// </summary>
-    public void SetCacheProgress(double progress)
+    public void SetCacheProgress(int progress)
     {
-        if (this.CacheProgress.Equals(progress))
-        {
-            this._logger?.LogDebug("Cache progress is already {Progress}", progress);
-            return;
-        }
-        
-        this._logger?.LogInformation("Cache progress changed to {Progress}", progress);
-        this.CacheProgress = progress;
-        this.CacheProgressChanged?.InvokeAndForget(this, new CacheProgressChangesEventArgs(progress));
-    }
-    
-    /// <summary>
-    /// Caches the media item.
-    /// </summary>
-    public ValueTask<bool> CacheAsync()
-    {
-        return this.DataService.CachePlayItemAsync(this);
-    }
-
-    /// <summary>
-    /// Gets the cache path of the media item.
-    /// </summary>
-    public ValueTask<string?> GetCachePathAsync()
-    {
-        return this.DataService.GetCachedMediaItemPathAsync(this);
-    }
-
-    /// <summary>
-    /// Gets the cache stream of the media item.
-    /// </summary>
-    public ValueTask<Stream?> GetCacheStreamAsync()
-    {
-        return this.DataService.GetCachedMediaItemStreamAsync(this);
-    }
-    
-    /// <summary>
-    /// Removes the media item from cache.
-    /// </summary>
-    public ValueTask<bool> RemoveFromCacheAsync()
-    {
-        return this.DataService.RemoveFromCacheAsync(this);
-    }
-
-    /// <summary>
-    /// Disposes the media item.
-    /// Additionally removes it from cache if it is cached.
-    /// </summary>
-    public virtual async ValueTask DisposeAsync()
-    {
-        if (this.CacheState == CacheState.Caching 
-            || this.CacheState == CacheState.Cached)
-            await this.RemoveFromCacheAsync();
+        CacheProgressChanged?.InvokeAndForget(this, new CacheProgressChangesEventArgs(progress));
+        _logger?.LogDebug("Cache progress of {PathTitle} changed to {Progress}%", PathTitle, progress);
     }
 }

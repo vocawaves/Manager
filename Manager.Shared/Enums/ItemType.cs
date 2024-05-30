@@ -2,9 +2,10 @@
 
 public enum ItemType
 {
-    Audio,
-    Video,
-    Subtitle,
-    Image,
-    Other
+    Guess = 0,
+    Audio = 1,
+    Video = 2,
+    Subtitle = 4,
+    Image = 8,
+    Misc = 16
 }

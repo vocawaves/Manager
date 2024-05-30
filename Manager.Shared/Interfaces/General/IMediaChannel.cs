@@ -69,6 +69,16 @@ public interface IMediaChannel : IAsyncDisposable
     /// A list of position triggers. Should not be modified from the outside.
     /// </summary>
     public List<PositionTrigger> PositionTriggers { get; }
+    
+    /// <summary>
+    /// Current position of the media item.
+    /// </summary>
+    public TimeSpan? Position { get; }
+    
+    /// <summary>
+    /// The length of the media item.
+    /// </summary>
+    public TimeSpan? Length { get; }
 
     /// <summary>
     /// Start playing the media item.

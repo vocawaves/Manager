@@ -1,0 +1,245 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:SimplePlayer.ViewModels"
+             xmlns:models="clr-namespace:SimplePlayer.Models"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="SimplePlayer.Views.MainView"
+             x:DataType="vm:MainViewModel">
+    <Design.DataContext>
+        <!-- This only sets the DataContext for the previewer in an IDE,
+         to set the actual DataContext for runtime, set the DataContext property in code (look at App.axaml.cs) -->
+        <vm:MainViewModel />
+    </Design.DataContext>
+
+    <Grid ColumnDefinitions="250, *"
+          RowDefinitions="*, Auto, Auto">
+
+        <ScrollViewer Grid.Column="0"
+                      Grid.Row="0">
+
+            <StackPanel Orientation="Vertical"
+                        HorizontalAlignment="Stretch">
+                <Expander HorizontalAlignment="Stretch"
+                          Header="Playlist Management">
+                    <Grid ColumnDefinitions="*, *"
+                          RowDefinitions="Auto, Auto, Auto, Auto, Auto, Auto, Auto">
+                        <Button Grid.Column="0"
+                                Grid.Row="0"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Center"
+                                Content="Add Playlist"
+                                Command="{Binding AddPlaylist}"
+                                CommandParameter="{Binding $parent[Window]}" />
+                        <Button Grid.Column="1"
+                                Grid.Row="0"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Center"
+                                Content="Add Files"
+                                Command="{Binding AddToPlaylist}"
+                                CommandParameter="{Binding $parent[Window]}" />
+                        <Separator Grid.Column="0"
+                                   Grid.Row="1"
+                                   Margin="0,5" />
+                        <Separator Grid.Column="1"
+                                   Grid.Row="1"
+                                   Margin="0,5" />
+                        <Button Grid.Column="0"
+                                Grid.Row="2"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Center"
+                                Content="Save" />
+                        <Button Grid.Column="1"
+                                Grid.Row="2"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Center"
+                                Content="Save All" />
+                        <Separator Grid.Column="0"
+                                   Grid.Row="3"
+                                   Margin="0,5" />
+                        <Separator Grid.Column="1"
+                                   Grid.Row="3"
+                                   Margin="0,5" />
+                        <Button Grid.Column="0"
+                                Grid.Row="4"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Center"
+                                Content="Load" />
+                        <Button Grid.Column="1"
+                                Grid.Row="4"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Center"
+                                Content="Load All" />
+                        <Separator Grid.Column="0"
+                                   Grid.Row="5"
+                                   Margin="0,5" />
+                        <Separator Grid.Column="1"
+                                   Grid.Row="5"
+                                   Margin="0,5" />
+                        <Button Grid.Column="0"
+                                Grid.Row="6"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Center"
+                                Content="Clear List" />
+                        <Button Grid.Column="1"
+                                Grid.Row="6"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Center"
+                                Content="Save Scratch" />
+                    </Grid>
+                </Expander>
+                <Expander HorizontalAlignment="Stretch"
+                          Header="Playback">
+
+                    <Grid ColumnDefinitions="*, *"
+                          RowDefinitions="Auto, Auto, Auto, Auto, Auto">
+                        <Button Grid.Column="0"
+                                Grid.ColumnSpan="2"
+                                Grid.Row="0"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Center"
+                                Content="Play"
+                                Command="{Binding Play}" />
+                        <Separator Grid.Column="0"
+                                   Grid.Row="1"
+                                   Margin="0,5" />
+                        <Separator Grid.Column="1"
+                                   Grid.Row="1"
+                                   Margin="0,5" />
+                        <Button Grid.Column="0"
+                                Grid.Row="2"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Center"
+                                VerticalAlignment="Stretch"
+                                VerticalContentAlignment="Center"
+                                Content="Stop" />
+                        <Button Grid.Column="1"
+                                Grid.Row="2"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Center">
+                            <TextBlock TextAlignment="Center"
+                                       TextWrapping="Wrap"
+                                       Text="Pause/ Resume" />
+                        </Button>
+                        <Separator Grid.Column="0"
+                                   Grid.Row="3"
+                                   Margin="0,5" />
+                        <Separator Grid.Column="1"
+                                   Grid.Row="3"
+                                   Margin="0,5" />
+                        <Button Grid.Column="0"
+                                Grid.Row="4"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Center">
+                            <TextBlock TextAlignment="Center"
+                                       TextWrapping="Wrap"
+                                       Text="Open Video Window" />
+                        </Button>
+                        <Button Grid.Column="1"
+                                Grid.Row="4"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Center">
+                            <TextBlock TextAlignment="Center"
+                                       TextWrapping="Wrap"
+                                       Text="Fullscreen Toggle" />
+                        </Button>
+                    </Grid>
+                </Expander>
+            </StackPanel>
+
+        </ScrollViewer>
+
+        <Grid Grid.Column="1"
+              Grid.Row="0"
+              Grid.RowSpan="2"
+              RowDefinitions="Auto, *">
+            <TabStrip Grid.Row="0"
+                      ItemsSource="{Binding Playlists}">
+                <TabStrip.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <WrapPanel Orientation="Horizontal" />
+                    </ItemsPanelTemplate>
+                </TabStrip.ItemsPanel>
+                <TabStrip.ItemTemplate>
+                    <DataTemplate DataType="models:PlaylistModel">
+                        <StackPanel Orientation="Horizontal"
+                                    Spacing="5">
+                            <TextBlock Text="{Binding Name}" />
+                            <Button Content="X"
+                                    IsVisible="{Binding IsRemovable}"
+                                    Command="{Binding Remove}" />
+                        </StackPanel>
+                    </DataTemplate>
+                </TabStrip.ItemTemplate>
+            </TabStrip>
+
+            <ListBox Grid.Row="1"
+                     SelectedItem="{Binding SelectedPlaylistItem}"
+                     ItemsSource="{Binding SelectedPlaylist.PlaylistItems}">
+                <ListBox.ItemTemplate>
+                    <DataTemplate DataType="models:PlaylistItemModel">
+                        <Border IsHitTestVisible="True"
+                                Padding="12,9,12,12"
+                                Background="Transparent"
+                                HorizontalAlignment="Stretch"
+                                VerticalAlignment="Stretch">
+                            <Grid ColumnDefinitions="*, Auto, Auto">
+                                <TextBlock Grid.Column="0"
+                                           VerticalAlignment="Center"
+                                           Text="{Binding Item.PathTitle}" />
+
+                                <TextBlock Grid.Column="1"
+                                           Margin="10,0"
+                                           VerticalAlignment="Center"
+                                           Text="BPM would be here" />
+
+                                <Button Grid.Column="2"
+                                        Content="X"
+                                        HorizontalAlignment="Center"
+                                        HorizontalContentAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        VerticalContentAlignment="Center"
+                                        Command="{Binding Remove}" />
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+                <ListBox.Styles>
+                    <Style Selector="ListBox > ListBoxItem">
+                        <Setter Property="Padding" Value="0" />
+                    </Style>
+                </ListBox.Styles>
+            </ListBox>
+        </Grid>
+
+        <Grid Grid.Column="0"
+              Grid.ColumnSpan="2"
+              Grid.Row="2"
+              ColumnDefinitions="*, *, 150, Auto, Auto">
+
+            <TextBlock Grid.Column="0"
+                       Margin="5,0"
+                       VerticalAlignment="Center"
+                       Text="{Binding RemainingTime, StringFormat='Remaining Time: {0}'}" />
+
+            <NumericUpDown Grid.Column="2"
+                           VerticalAlignment="Center"
+                           VerticalContentAlignment="Center"
+                           Minimum="1"
+                           Maximum="99999"
+                           Value="8869"
+                           Watermark="Port" />
+
+            <TextBlock Grid.Column="3"
+                       Margin="5,0"
+                       VerticalAlignment="Center"
+                       Text="Enable API?" />
+            <ToggleSwitch Margin="5,0"
+                          Grid.Column="4" />
+
+        </Grid>
+
+    </Grid>
+
+</UserControl>
