@@ -58,17 +58,12 @@ public class MediaPlayer : IManagerComponent
         }
     }
     
-    private MediaPlayer(ComponentManager componentManager, string name, ulong parent)
+    public MediaPlayer(ComponentManager componentManager, string name, ulong parent)
     {
         _logger = componentManager.CreateLogger<MediaPlayer>();
         ComponentManager = componentManager;
         Name = name;
         Parent = parent;
-    }
-
-    public static IManagerComponent? Create(ComponentManager componentManager, string name, ulong parent)
-    {
-        return new MediaPlayer(componentManager, name, parent);
     }
 
     public async ValueTask<bool> InitializeAsync(params string[] options)
@@ -78,13 +73,13 @@ public class MediaPlayer : IManagerComponent
         
         _logger?.LogInformation("Initializing MediaPlayer...");
         
-        var bassBackend = this.ComponentManager.CreateManagerComponent<BassBackend>("BASS", 0);
+        var bassBackend = this.ComponentManager.CreateComponent<BassBackend>("BASS", 0);
         if (bassBackend == null)
         {
             _logger?.LogError("Failed to create BassBackend.");
             return false;
         }
-        var vlcBackend = this.ComponentManager.CreateManagerComponent<LibVLCBackend>("LibVLC", 0);
+        var vlcBackend = this.ComponentManager.CreateComponent<LibVLCBackend>("LibVLC", 0);
         if (vlcBackend == null)
         {
             _logger?.LogError("Failed to create LibVLCBackend.");
@@ -93,12 +88,17 @@ public class MediaPlayer : IManagerComponent
         BackendServices.Add(bassBackend);
         BackendServices.Add(vlcBackend);
         
-        var localCacheStrategy = DummyCacheStrategy.Create(ComponentManager.CreateLogger<DummyCacheStrategy>());
+        var dummyCache = this.ComponentManager.CreateComponent<DummyCacheStrategy>("DummyCacheStrategy", 0);
+        if (dummyCache == null)
+        {
+            _logger?.LogError("Failed to create DummyCacheStrategy.");
+            return false;
+        }
         var localDataConfig = new LocalDataServiceConfiguration()
         {
-            CacheStrategy = localCacheStrategy
+            CacheStrategy = dummyCache
         };
-        var localDataService = ComponentManager.CreateManagerComponent<LocalDataService, LocalDataServiceConfiguration>("LocalData", 0, localDataConfig);
+        var localDataService = ComponentManager.CreateComponent<LocalDataService, LocalDataServiceConfiguration>("LocalData", 0, localDataConfig);
         if (localDataService == null)
         {
             _logger?.LogError("Failed to create LocalDataService.");

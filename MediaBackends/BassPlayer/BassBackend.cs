@@ -14,11 +14,6 @@ namespace Manager.MediaBackends.BassPlayer;
 
 public class BassBackend : IAudioBackendService
 {
-    public event AsyncEventHandler<GlobalDefaultVolumeChangedEventArgs>? GlobalVolumeChanged;
-    public event AsyncEventHandler<GlobalAudioDeviceChangedEventArgs>? GlobalDeviceChanged;
-
-    private readonly ILogger<BassBackend>? _logger;
-
     #region IManagerComponent
 
     public event AsyncEventHandler? InitSuccess;
@@ -29,18 +24,18 @@ public class BassBackend : IAudioBackendService
     public ulong Parent { get; }
 
     #endregion
+    
+    public event AsyncEventHandler<GlobalDefaultVolumeChangedEventArgs>? GlobalVolumeChanged;
+    public event AsyncEventHandler<GlobalAudioDeviceChangedEventArgs>? GlobalDeviceChanged;
 
-    private BassBackend(ComponentManager componentManager, string name, ulong parent)
+    private readonly ILogger<BassBackend>? _logger;
+
+    public BassBackend(ComponentManager componentManager, string name, ulong parent)
     {
         this.ComponentManager = componentManager;
         this.Name = name;
         this.Parent = parent;
         this._logger = componentManager.CreateLogger<BassBackend>();
-    }
-
-    public static IManagerComponent? Create(ComponentManager componentManager, string name, ulong parent)
-    {
-        return new BassBackend(componentManager, name, parent);
     }
 
     public ValueTask<bool> InitializeAsync(params string[] options)

@@ -15,8 +15,6 @@ namespace Manager.MediaBackends.LibVLCPlayer;
 
 public class LibVLCBackend : IVideoBackendService, IAudioBackendService
 {
-    public event AsyncEventHandler<GlobalDefaultVolumeChangedEventArgs>? GlobalVolumeChanged;
-    public event AsyncEventHandler<GlobalAudioDeviceChangedEventArgs>? GlobalDeviceChanged;
 
     #region IManagerComponent
     
@@ -29,25 +27,23 @@ public class LibVLCBackend : IVideoBackendService, IAudioBackendService
 
     #endregion
     
+    public event AsyncEventHandler<GlobalDefaultVolumeChangedEventArgs>? GlobalVolumeChanged;
+    public event AsyncEventHandler<GlobalAudioDeviceChangedEventArgs>? GlobalDeviceChanged;
+    
+    private readonly ILogger<LibVLCBackend>? _logger;
+    
     private LibVLC? _internalLibVLC;
     private MediaPlayer? _internalMediaPlayer;
     
     private AudioDevice? _currentDefaultDevice;
     private float _currentDefaultVolume = 1.0f;
-    
-    private readonly ILogger<LibVLCBackend>? _logger;
 
-    private LibVLCBackend(ComponentManager componentManager, string name, ulong parent)
+    public LibVLCBackend(ComponentManager componentManager, string name, ulong parent)
     {
         this.ComponentManager = componentManager;
         this.Name = name;
         this.Parent = parent;
         this._logger = componentManager.CreateLogger<LibVLCBackend>();
-    }
-    
-    public static IManagerComponent? Create(ComponentManager componentManager, string name, ulong parent)
-    {
-        return new LibVLCBackend(componentManager, name, parent);
     }
 
     public ValueTask<bool> InitializeAsync(params string[] options)

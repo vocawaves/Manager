@@ -14,8 +14,6 @@ namespace Manager.DataBackends.Local;
 public class LocalDataService : IManagerComponent<LocalDataServiceConfiguration>, IFileSystemSource, IAudioDataSource, IVideoDataSource, ISubtitleDataSource,
     IImageDataSource, IMiscDataSource
 {
-    private readonly ILogger<LocalDataService>? _logger;
-    private readonly ICacheStrategy _cacheStrategy;
 
     #region IManagerComponent
     
@@ -28,32 +26,41 @@ public class LocalDataService : IManagerComponent<LocalDataServiceConfiguration>
     public ulong Parent { get; }
     
     #endregion
+    
+    private readonly ILogger<LocalDataService>? _logger;
+    private readonly ICacheStrategy _cacheStrategy;
 
-    private LocalDataService(ComponentManager componentManager, string name, ulong parent, IComponentConfiguration? configuration = null)
+    public LocalDataService(ComponentManager componentManager, string name, ulong parent)
     {
+        _logger = componentManager.CreateLogger<LocalDataService>();
         ComponentManager = componentManager;
         Name = name;
         Parent = parent;
-        if (configuration is not LocalDataServiceConfiguration localConfig || localConfig.CacheStrategy is null)
+        var strategyConfig = new FolderCacheStrategyConfiguration
         {
-            var strategy = FolderCacheStrategy.Create(componentManager?.CreateLogger<FolderCacheStrategy>());
-            _cacheStrategy = strategy ?? throw new InvalidOperationException("Failed to create cache strategy");
-        }
-        else
+            CacheFolder = Path.Combine(Directory.GetCurrentDirectory(), "ManagerCache")
+        };
+        var strategy = componentManager.CreateComponent<FolderCacheStrategy, FolderCacheStrategyConfiguration>("LocalCacheStrategy", parent, strategyConfig);
+        if (strategy is null)
         {
-            _cacheStrategy = localConfig.CacheStrategy;
+            _logger?.LogError("Failed to create cache strategy");
+            throw new InvalidOperationException("Failed to create cache strategy");
         }
-        _logger = this.ComponentManager.CreateLogger<LocalDataService>();
-    }
-
-    public static IManagerComponent? Create(ComponentManager componentManager, string name, ulong parent)
-    {
-        return new LocalDataService(componentManager, name, parent);
+        Configuration = new LocalDataServiceConfiguration
+        {
+            CacheStrategy = strategy
+        };
+        _cacheStrategy = strategy;
     }
     
-    public static IManagerComponent<LocalDataServiceConfiguration>? CreateWithConfiguration(ComponentManager componentManager, string name, ulong parent, LocalDataServiceConfiguration configuration)
+    public LocalDataService(ComponentManager componentManager, string name, ulong parent, LocalDataServiceConfiguration configuration)
     {
-        return new LocalDataService(componentManager, name, parent, configuration);
+        _logger = componentManager.CreateLogger<LocalDataService>();
+        ComponentManager = componentManager;
+        Name = name;
+        Parent = parent;
+        Configuration = configuration;
+        _cacheStrategy = configuration.CacheStrategy;
     }
 
     public ValueTask<bool> InitializeAsync(params string[] options)

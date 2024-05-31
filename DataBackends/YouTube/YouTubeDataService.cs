@@ -33,43 +33,67 @@ public class YouTubeDataService : IManagerComponent<YouTubeDataServiceConfigurat
 
     #endregion
 
-    private YouTubeDataService(ComponentManager componentManager, string name, ulong parent, IComponentConfiguration? config = null)
+    public YouTubeDataService(ComponentManager componentManager, string name, ulong parent)
     {
-        this._logger = componentManager.CreateLogger<YouTubeDataService>();
-        this.ComponentManager = componentManager;
-        this.Name = name;
-        this.Parent = parent;
-        this.Configuration = config as YouTubeDataServiceConfiguration;
-        if (config is not YouTubeDataServiceConfiguration youtubeConfig || youtubeConfig.CacheStrategy is null)
+        _logger = componentManager.CreateLogger<YouTubeDataService>();
+        ComponentManager = componentManager;
+        Name = name;
+        Parent = parent;
+        _youtubeClient = new YoutubeClient();
+        _httpClient = new HttpClient();
+        var cacheStrategy = componentManager.CreateComponent<FolderCacheStrategy, FolderCacheStrategyConfiguration>(
+            "YouTubeCacheStrategy", parent, new FolderCacheStrategyConfiguration
+            {
+                CacheFolder = Path.Combine(Directory.GetCurrentDirectory(), "YouTubeCache")
+            });
+        if (cacheStrategy is null)
         {
-            this._logger?.LogInformation("No configuration provided for {Name}", name);
-            _cacheStrategy = new FolderCacheStrategy(componentManager.CreateLogger<FolderCacheStrategy>());
+            _logger?.LogError("Failed to create cache strategy");
+            throw new InvalidOperationException("Failed to create cache strategy");
+        }
+        Configuration = new YouTubeDataServiceConfiguration
+        {
+            CacheStrategy = cacheStrategy
+        };
+        _cacheStrategy = cacheStrategy;
+    }
+    
+    public YouTubeDataService(ComponentManager componentManager, string name, ulong parent, YouTubeDataServiceConfiguration configuration)
+    {
+        _youtubeClient = new YoutubeClient();
+        _httpClient = new HttpClient();
+        _logger = componentManager.CreateLogger<YouTubeDataService>();
+        ComponentManager = componentManager;
+        Name = name;
+        Parent = parent;
+        Configuration = configuration;
+        if (configuration.CacheStrategy is not null)
+        {
+            _cacheStrategy = configuration.CacheStrategy;
         }
         else
         {
-            this._logger?.LogInformation("Using provided configuration for {Name}", name);
-            _cacheStrategy = youtubeConfig.CacheStrategy;
+            var cacheStrategy = componentManager.CreateComponent<FolderCacheStrategy, FolderCacheStrategyConfiguration>(
+                "YouTubeCacheStrategy", parent, new FolderCacheStrategyConfiguration
+                {
+                    CacheFolder = Path.Combine(Directory.GetCurrentDirectory(), "YouTubeCache")
+                });
+            if (cacheStrategy is null)
+            {
+                _logger?.LogError("Failed to create cache strategy");
+                throw new InvalidOperationException("Failed to create cache strategy");
+            }
+
+            Configuration.CacheStrategy = cacheStrategy;
+            _cacheStrategy = cacheStrategy;
         }
-        this._youtubeClient = new YoutubeClient();
-        this._httpClient = new HttpClient();
     }
-
-    public static IManagerComponent? Create(ComponentManager componentManager, string name, ulong parent)
-    {
-        return new YouTubeDataService(componentManager, name, parent);
-    }
-
-    public static IManagerComponent<YouTubeDataServiceConfiguration>? CreateWithConfiguration(ComponentManager componentManager, string name, ulong parent,
-        YouTubeDataServiceConfiguration configuration)
-    {
-        return new YouTubeDataService(componentManager, name, parent, configuration);
-    }
-
+    
     public ValueTask<bool> InitializeAsync(params string[] options)
     {
         return ValueTask.FromResult(true);
     }
-
+    
     public async ValueTask<MediaItem?> GetAudioItemAsync(string uri)
     {
         var videoId = VideoId.TryParse(uri);

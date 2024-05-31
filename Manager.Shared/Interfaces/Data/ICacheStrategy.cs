@@ -1,6 +1,5 @@
-﻿using Manager.Shared.Cache;
-using Manager.Shared.Entities;
-using Microsoft.Extensions.Logging;
+﻿using Manager.Shared.Entities;
+using Manager.Shared.Interfaces.General;
 
 namespace Manager.Shared.Interfaces.Data;
 
@@ -8,7 +7,7 @@ namespace Manager.Shared.Interfaces.Data;
 /// Handles caching of media items to help with flash drives and slow internet connections.
 /// All MediaItems need to be cached before they can be played.
 /// </summary>
-public interface ICacheStrategy
+public interface ICacheStrategy : IManagerComponent
 {
     /// <summary>
     /// Check if the media item is already cached.
@@ -40,9 +39,4 @@ public interface ICacheStrategy
     /// Get the cached byte array of the media item.
     /// </summary>
     public ValueTask<Stream?> GetCachedStreamAsync(MediaItem mediaItem);
-    
-    public static virtual ICacheStrategy? Create(ILogger<ICacheStrategy>? logger = null, string[]? options = null)
-    {
-        return null;
-    }
 }

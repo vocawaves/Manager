@@ -1,4 +1,5 @@
-﻿using Manager.Shared.Interfaces.General;
+﻿using System.Diagnostics.CodeAnalysis;
+using Manager.Shared.Interfaces.General;
 using Microsoft.Extensions.Logging;
 
 namespace Manager.Shared;
@@ -17,16 +18,16 @@ public class ComponentManager
             _logger = loggerFactory.CreateLogger<ComponentManager>();
     }
 
-    public T? CreateManagerComponent<T, TConf>(string name, ulong parent, TConf configuration)
-        where T : class, IManagerComponent<TConf> where TConf : class, IComponentConfiguration
+    public T? CreateComponent<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] T>(
+        string name, ulong parentId) where T : IManagerComponent
     {
         try
         {
-            var actObject = T.CreateWithConfiguration(this, name, parent, configuration);
-            if (actObject is not T component)
+            var bareObject = Activator.CreateInstance(typeof(T), this, name, parentId);
+            if (bareObject is not T component)
             {
-                _logger?.LogError($"Failed to create component of type {typeof(T).Name}");
-                return null;
+                _logger?.LogError("Failed to create component {ComponentName}", name);
+                return default;
             }
 
             Components.Add(component);
@@ -34,22 +35,22 @@ public class ComponentManager
         }
         catch (Exception e)
         {
-            _logger?.LogError(e, $"Failed to create component of type {typeof(T).Name}");
+            _logger?.LogError(e, "Failed to create component {ComponentName}", name);
+            return default;
         }
-
-        return null;
     }
-    
-    public T? CreateManagerComponent<T>(string name, ulong parent)
-        where T : class, IManagerComponent
+
+    public T? CreateComponent<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] T,TConf>(
+        string name, ulong parentId, TConf configuration) where T : IManagerComponent
+        where TConf : IComponentConfiguration
     {
         try
         {
-            var actObject = T.Create(this, name, parent);
-            if (actObject is not T component)
+            var bareObject = Activator.CreateInstance(typeof(T), this, name, parentId, configuration);
+            if (bareObject is not T component)
             {
-                _logger?.LogError($"Failed to create component of type {typeof(T).Name}");
-                return null;
+                _logger?.LogError("Failed to create component {ComponentName}", name);
+                return default;
             }
 
             Components.Add(component);
@@ -57,10 +58,9 @@ public class ComponentManager
         }
         catch (Exception e)
         {
-            _logger?.LogError(e, $"Failed to create component of type {typeof(T).Name}");
+            _logger?.LogError(e, "Failed to create component {ComponentName}", name);
+            return default;
         }
-
-        return null;
     }
 
     public ILogger<T>? CreateLogger<T>() where T : class

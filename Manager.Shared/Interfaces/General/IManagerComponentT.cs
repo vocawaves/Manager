@@ -6,10 +6,5 @@ public interface IManagerComponent<TConf> : IManagerComponent
     /// <summary>
     /// Component configuration, if any.
     /// </summary>
-    public TConf? Configuration { get; }
-    
-    public static virtual IManagerComponent<TConf>? CreateWithConfiguration(ComponentManager componentManager, string name, ulong parent, TConf configuration) 
-    {
-        throw new NotImplementedException();
-    }
+    public TConf Configuration { get; }
 }

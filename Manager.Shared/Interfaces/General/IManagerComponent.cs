@@ -40,9 +40,4 @@ public interface IManagerComponent
     /// </summary>
     public ValueTask<bool> InitializeAsync(params string[] options);
 
-    public static virtual IManagerComponent? Create(ComponentManager componentManager, string name, ulong parent)
-    {
-        throw new NotImplementedException();
-    }
-
 }

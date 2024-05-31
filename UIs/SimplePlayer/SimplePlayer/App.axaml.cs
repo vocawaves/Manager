@@ -30,7 +30,7 @@ public partial class App : Application
         });
         var logger = loggerFactory.CreateLogger<App>();
         var componentManager = new ComponentManager(loggerFactory);
-        var mediaPlayer = componentManager.CreateManagerComponent<MediaPlayer>("MediaPlayer", 0);
+        var mediaPlayer = componentManager.CreateComponent<MediaPlayer>("MediaPlayer", 0);
         if (mediaPlayer == null)
         {
             logger.LogError("Failed to create media player.");

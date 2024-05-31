@@ -63,7 +63,7 @@ public class LibVLCChannel : IMediaChannel, IVideoChannel, IChannelSupportsAudio
         {
             this.Ended?.InvokeAndForget(this, EventArgs.Empty);
             this.StateChanged?.InvokeAndForget(this, new ChannelStateChangedEventArgs(ChannelState.Ended));
-            this._logger?.LogDebug("Media playback ended");
+            this._logger?.LogInformation("Media playback ended");
         };
         this.Player.TimeChanged += (sender, args) =>
         {

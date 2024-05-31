@@ -1,5 +1,7 @@
 ﻿using Manager.Shared.Entities;
 using Manager.Shared.Enums;
+using Manager.Shared.Events.General;
+using Manager.Shared.Helpers;
 using Manager.Shared.Interfaces.Data;
 using Microsoft.Extensions.Logging;
 
@@ -10,16 +12,29 @@ namespace Manager.Shared.Cache;
 /// </summary>
 public class DummyCacheStrategy : ICacheStrategy
 {
+    #region IManagerComponent
+
+    public event AsyncEventHandler? InitSuccess;
+    public event AsyncEventHandler<InitFailedEventArgs>? InitFailed;
+    public bool Initialized { get; } = true;
+    public ComponentManager ComponentManager { get; }
+    public string Name { get; }
+    public ulong Parent { get; }
+    
+    #endregion
     private readonly ILogger<DummyCacheStrategy>? _logger;
     
-    public DummyCacheStrategy(ILogger<DummyCacheStrategy>? logger = null, string[]? options = null)
+    public DummyCacheStrategy(ComponentManager componentManager, string name, ulong parent)
     {
-        _logger = logger;
+        ComponentManager = componentManager;
+        Name = name;
+        Parent = parent;
+        _logger = componentManager.CreateLogger<DummyCacheStrategy>();
     }
-
-    public static ICacheStrategy? Create(ILogger<ICacheStrategy>? logger = null, string[]? options = null)
+    
+    public ValueTask<bool> InitializeAsync(params string[] options)
     {
-        return new DummyCacheStrategy(logger as ILogger<DummyCacheStrategy>, options);
+        return ValueTask.FromResult(true);
     }
 
     public ValueTask<bool> CheckForExistingCacheAsync(MediaItem mediaItem, string cacheName)
