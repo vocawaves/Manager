@@ -9,7 +9,6 @@
 
     <ItemGroup>
       <ProjectReference Include="$(SolutionDir)\Manager.Shared\Manager.Shared.csproj" />
-      <ProjectReference Include="$(SolutionDir)\MetadataReader\FFMPEG\FFMPEG.csproj" />
     </ItemGroup>
 
     <ItemGroup>

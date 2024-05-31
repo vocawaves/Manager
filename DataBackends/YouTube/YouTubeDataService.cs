@@ -1,5 +1,4 @@
-﻿using HeyRed.Mime;
-using Manager.Shared;
+﻿using Manager.Shared;
 using Manager.Shared.Cache;
 using Manager.Shared.Entities;
 using Manager.Shared.Enums;
@@ -9,13 +8,11 @@ using Manager.Shared.Interfaces.Data;
 using Manager.Shared.Interfaces.General;
 using Microsoft.Extensions.Logging;
 using YoutubeExplode;
-using YoutubeExplode.Common;
 using YoutubeExplode.Videos;
-using YoutubeExplode.Videos.Streams;
 
 namespace Manager.DataBackends.YouTube;
 
-public class YouTubeDataService : ManagerComponent, IStreamingServiceSource, IAudioDataSource, IVideoDataSource
+public class YouTubeDataService : IManagerComponent<YouTubeDataServiceConfiguration>, IStreamingServiceSource, IAudioDataSource, IVideoDataSource
 {
 
     private readonly ILogger<YouTubeDataService>? _logger;
@@ -23,9 +20,26 @@ public class YouTubeDataService : ManagerComponent, IStreamingServiceSource, IAu
     private readonly YoutubeClient _youtubeClient;
     private readonly HttpClient _httpClient;
 
-    private YouTubeDataService(ComponentManager componentManager, string name, ulong parent, IComponentConfiguration? config = null) : base(componentManager, name, parent, config)
+    #region IManagerComponent
+
+    public event AsyncEventHandler? InitSuccess;
+    public event AsyncEventHandler<InitFailedEventArgs>? InitFailed;
+    public bool Initialized { get; } = true;
+    public ComponentManager ComponentManager { get; }
+    public string Name { get; }
+    public ulong Parent { get; }
+
+    public YouTubeDataServiceConfiguration? Configuration { get; }
+
+    #endregion
+
+    private YouTubeDataService(ComponentManager componentManager, string name, ulong parent, IComponentConfiguration? config = null)
     {
         this._logger = componentManager.CreateLogger<YouTubeDataService>();
+        this.ComponentManager = componentManager;
+        this.Name = name;
+        this.Parent = parent;
+        this.Configuration = config as YouTubeDataServiceConfiguration;
         if (config is not YouTubeDataServiceConfiguration youtubeConfig || youtubeConfig.CacheStrategy is null)
         {
             this._logger?.LogInformation("No configuration provided for {Name}", name);
@@ -40,7 +54,18 @@ public class YouTubeDataService : ManagerComponent, IStreamingServiceSource, IAu
         this._httpClient = new HttpClient();
     }
 
-    public override ValueTask<bool> InitializeAsync(params string[] options)
+    public static IManagerComponent? Create(ComponentManager componentManager, string name, ulong parent)
+    {
+        return new YouTubeDataService(componentManager, name, parent);
+    }
+
+    public static IManagerComponent<YouTubeDataServiceConfiguration>? CreateWithConfiguration(ComponentManager componentManager, string name, ulong parent,
+        YouTubeDataServiceConfiguration configuration)
+    {
+        return new YouTubeDataService(componentManager, name, parent, configuration);
+    }
+
+    public ValueTask<bool> InitializeAsync(params string[] options)
     {
         return ValueTask.FromResult(true);
     }
@@ -55,15 +80,6 @@ public class YouTubeDataService : ManagerComponent, IStreamingServiceSource, IAu
         }
 
         throw new NotImplementedException();
-        //var video = await _youtubeClient.Videos.GetAsync(videoId.Value);
-        //this._logger?.LogDebug("Got video {Title} by {Author}", video.Title, video.Author.ChannelTitle);
-        //var thumbnailUrl = video.Thumbnails.GetWithHighestResolution();
-        //var thumbnailData = await _httpClient.GetByteArrayAsync(thumbnailUrl.Url);
-        //var thumbnailMimeType = MimeGuesser.GuessMimeType(thumbnailData);
-        //var audioItem = new AudioItem(this, Parent, uri, videoId, video.Title, video.Author.ChannelTitle,
-        //    video.Duration ?? TimeSpan.Zero, thumbnailData, thumbnailMimeType,
-        //    this._instancer.CreateLogger<AudioItem>());
-        //return audioItem;
     }
 
     public async ValueTask<MediaItem?> GetVideoItemAsync(string uri)

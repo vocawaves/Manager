@@ -1,4 +1,5 @@
-﻿using Manager.DataBackends.Local;
+﻿using System.Diagnostics.CodeAnalysis;
+using Manager.DataBackends.Local;
 using Manager.MediaBackends.BassPlayer;
 using Manager.MediaBackends.LibVLCPlayer;
 using Manager.Shared;
@@ -16,10 +17,21 @@ using Microsoft.Extensions.Logging;
 
 namespace Manager.SimplePlayer;
 
-public class MediaPlayer : ManagerComponent
+public class MediaPlayer : IManagerComponent
 {
     private readonly ILogger<MediaPlayer>? _logger;
     private IMediaChannel? _activeMediaChannel;
+
+    #region IMangerComponent
+
+    public event AsyncEventHandler? InitSuccess;
+    public event AsyncEventHandler<InitFailedEventArgs>? InitFailed;
+    public bool Initialized { get; private set; } = false;
+    public ComponentManager ComponentManager { get; }
+    public string Name { get; }
+    public ulong Parent { get; }
+
+    #endregion
     
     public event AsyncEventHandler? ActiveChannelChanged;
     public event AsyncEventHandler<MediaItem>? MediaAdded;
@@ -45,13 +57,78 @@ public class MediaPlayer : ManagerComponent
             ActiveChannelChanged?.InvokeAndForget(this, EventArgs.Empty);
         }
     }
-
-    public MediaPlayer(ComponentManager componentManager, string name, ulong parent, IComponentConfiguration? configuration = null) 
-        : base(componentManager, name, parent, configuration)
+    
+    private MediaPlayer(ComponentManager componentManager, string name, ulong parent)
     {
         _logger = componentManager.CreateLogger<MediaPlayer>();
+        ComponentManager = componentManager;
+        Name = name;
+        Parent = parent;
     }
-    
+
+    public static IManagerComponent? Create(ComponentManager componentManager, string name, ulong parent)
+    {
+        return new MediaPlayer(componentManager, name, parent);
+    }
+
+    public async ValueTask<bool> InitializeAsync(params string[] options)
+    {
+        if (Initialized)
+            return true;
+        
+        _logger?.LogInformation("Initializing MediaPlayer...");
+        
+        var bassBackend = this.ComponentManager.CreateManagerComponent<BassBackend>("BASS", 0);
+        if (bassBackend == null)
+        {
+            _logger?.LogError("Failed to create BassBackend.");
+            return false;
+        }
+        var vlcBackend = this.ComponentManager.CreateManagerComponent<LibVLCBackend>("LibVLC", 0);
+        if (vlcBackend == null)
+        {
+            _logger?.LogError("Failed to create LibVLCBackend.");
+            return false;
+        }
+        BackendServices.Add(bassBackend);
+        BackendServices.Add(vlcBackend);
+        
+        var localCacheStrategy = DummyCacheStrategy.Create(ComponentManager.CreateLogger<DummyCacheStrategy>());
+        var localDataConfig = new LocalDataServiceConfiguration()
+        {
+            CacheStrategy = localCacheStrategy
+        };
+        var localDataService = ComponentManager.CreateManagerComponent<LocalDataService, LocalDataServiceConfiguration>("LocalData", 0, localDataConfig);
+        if (localDataService == null)
+        {
+            _logger?.LogError("Failed to create LocalDataService.");
+            return false;
+        }
+        DataServices.Add(localDataService);
+        
+        foreach (var backend in BackendServices)
+        {
+            _logger?.LogInformation($"Initializing backend: {backend.Name}");
+            await backend.InitializeAsync();
+        }
+        foreach (var dataService in DataServices)
+        {
+            _logger?.LogInformation($"Initializing data service: {dataService.Name}");
+            await dataService.InitializeAsync();
+        }
+        
+        _logger?.LogInformation("MediaPlayer initialized successfully.");
+        Initialized = true;
+        this.InitSuccess?.InvokeAndForget(this, EventArgs.Empty);
+        return true;
+    }
+
+    public static IManagerComponent CreateManagerComponent<T>(string name, ulong parent,
+        IComponentConfiguration? configuration = null) where T : IManagerComponent
+    {
+        throw new NotImplementedException();
+    }
+
     public async ValueTask<MediaItem?> AddMediaAsync(string uri, ItemType type = ItemType.Guess)
     {
         var dataService = DataServices.FirstOrDefault();
@@ -93,58 +170,6 @@ public class MediaPlayer : ManagerComponent
         return ValueTask.FromResult(true);
     }
     
-    public override async ValueTask<bool> InitializeAsync(params string[] options)
-    {
-        if (Initialized)
-            return true;
-        
-        _logger?.LogInformation("Initializing MediaPlayer...");
-        
-        var bassBackend = this.ComponentManager.CreateManagerComponent<BassBackend>("BASS", 0);
-        if (bassBackend == null)
-        {
-            _logger?.LogError("Failed to create BassBackend.");
-            return false;
-        }
-        var vlcBackend = this.ComponentManager.CreateManagerComponent<LibVLCBackend>("LibVLC", 0);
-        if (vlcBackend == null)
-        {
-            _logger?.LogError("Failed to create LibVLCBackend.");
-            return false;
-        }
-        BackendServices.Add(bassBackend);
-        BackendServices.Add(vlcBackend);
-        
-        var localCacheStrategy = DummyCacheStrategy.Create(ComponentManager.CreateLogger<DummyCacheStrategy>());
-        var localDataConfig = new LocalDataServiceConfiguration()
-        {
-            CacheStrategy = localCacheStrategy
-        };
-        var localDataService = ComponentManager.CreateManagerComponent<LocalDataService>("LocalData", 0, localDataConfig);
-        if (localDataService == null)
-        {
-            _logger?.LogError("Failed to create LocalDataService.");
-            return false;
-        }
-        DataServices.Add(localDataService);
-        
-        foreach (var backend in BackendServices)
-        {
-            _logger?.LogInformation($"Initializing backend: {backend.Name}");
-            await backend.InitializeAsync();
-        }
-        foreach (var dataService in DataServices)
-        {
-            _logger?.LogInformation($"Initializing data service: {dataService.Name}");
-            await dataService.InitializeAsync();
-        }
-        
-        _logger?.LogInformation("MediaPlayer initialized successfully.");
-        Initialized = true;
-        this.OnInitSuccess(Name);
-        return true;
-    }
-    
     public async ValueTask<bool> PlayAsync(MediaItem mediaItem)
     {
         if (ActiveMediaChannel != null)
@@ -156,7 +181,7 @@ public class MediaPlayer : ManagerComponent
         IBackendService? mediaBackend = null;
         if (mediaItem.ItemType == ItemType.Audio)
             mediaBackend = BackendServices.FirstOrDefault(x => x is IAudioBackendService and not IVideoBackendService);
-        else if (mediaItem.ItemType == ItemType.Video)
+        else
             mediaBackend = BackendServices.FirstOrDefault(x => x is IVideoBackendService);
         if (mediaBackend == null)
         {

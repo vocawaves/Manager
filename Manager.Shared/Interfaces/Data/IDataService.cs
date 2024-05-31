@@ -6,7 +6,7 @@ namespace Manager.Shared.Interfaces.Data;
 /// <summary>
 /// This service works in combination with the IAudioDataService, IVideoDataService and others to get MediaItems in a standardised way.
 /// </summary>
-public interface IDataService : IManagerComponent
+public interface IDataService : General.IManagerComponent
 {
     /// <summary>
     /// Cache the media item.

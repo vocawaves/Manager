@@ -38,4 +38,8 @@
       </None>
     </ItemGroup>
 
+    <ItemGroup>
+      <ProjectReference Include="..\..\Manager.Shared\Manager.Shared.csproj" />
+    </ItemGroup>
+
 </Project>

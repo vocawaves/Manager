@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Platform;
 using LibVLCSharp.Shared;
 using Manager.MediaBackends.LibVLCPlayer;
+using Manager.Shared;
 using Microsoft.Extensions.Logging;
 
 namespace Manager.MediaBackends.UI.LibVLCPlayer.Avalonia;
@@ -28,9 +29,9 @@ public class VLCVideoControl : NativeControlHost, IVLCVideoControl
         set => SetAndRaise(SurfaceNameProperty, ref _surfaceName, value);
     }
 
-    public VLCVideoControl(string? name, LibVLCChannel channel, ILogger<VLCVideoControl>? logger = null)
+    public VLCVideoControl(ComponentManager componentManager, string? name, LibVLCChannel channel)
     {
-        this._logger = logger;
+        this._logger = componentManager.CreateLogger<VLCVideoControl>();
         this._channel = channel;
         this.MediaPlayer = channel.Player;
         this.SurfaceName = name ?? "VLCVideoControl";

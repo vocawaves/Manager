@@ -36,13 +36,13 @@ public interface IManagerComponent
     public ulong Parent { get; }
 
     /// <summary>
-    /// Component configuration, if any.
-    /// </summary>
-    public IComponentConfiguration? Configuration { get; }
-
-    /// <summary>
     /// Initializes the component.
     /// </summary>
-    public abstract ValueTask<bool> InitializeAsync(params string[] options);
+    public ValueTask<bool> InitializeAsync(params string[] options);
+
+    public static virtual IManagerComponent? Create(ComponentManager componentManager, string name, ulong parent)
+    {
+        throw new NotImplementedException();
+    }
 
 }

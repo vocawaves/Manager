@@ -12,24 +12,43 @@ using Microsoft.Extensions.Logging;
 
 namespace Manager.MediaBackends.BassPlayer;
 
-public class BassBackend : ManagerComponent, IAudioBackendService
+public class BassBackend : IAudioBackendService
 {
     public event AsyncEventHandler<GlobalDefaultVolumeChangedEventArgs>? GlobalVolumeChanged;
     public event AsyncEventHandler<GlobalAudioDeviceChangedEventArgs>? GlobalDeviceChanged;
 
     private readonly ILogger<BassBackend>? _logger;
 
-    public BassBackend(ComponentManager componentManager, string name, ulong parent, IComponentConfiguration? configuration = null) : base(componentManager, name, parent, configuration)
+    #region IManagerComponent
+
+    public event AsyncEventHandler? InitSuccess;
+    public event AsyncEventHandler<InitFailedEventArgs>? InitFailed;
+    public bool Initialized { get; private set; }
+    public ComponentManager ComponentManager { get; }
+    public string Name { get; }
+    public ulong Parent { get; }
+
+    #endregion
+
+    private BassBackend(ComponentManager componentManager, string name, ulong parent)
     {
+        this.ComponentManager = componentManager;
+        this.Name = name;
+        this.Parent = parent;
         this._logger = componentManager.CreateLogger<BassBackend>();
     }
 
-    public override ValueTask<bool> InitializeAsync(params string[] options)
+    public static IManagerComponent? Create(ComponentManager componentManager, string name, ulong parent)
+    {
+        return new BassBackend(componentManager, name, parent);
+    }
+
+    public ValueTask<bool> InitializeAsync(params string[] options)
     {
         var bassInit = Bass.Init();
         if (!bassInit)
         {
-            this.OnInitFailed(Bass.LastError.ToString());
+            this.InitFailed.InvokeAndForget(this, new InitFailedEventArgs(Bass.LastError.ToString()));
             this._logger?.LogError("Failed to initialize Bass: {BassLastError}", Bass.LastError);
             return ValueTask.FromResult(false);
         }
@@ -54,7 +73,7 @@ public class BassBackend : ManagerComponent, IAudioBackendService
         }
 
         this.Initialized = true;
-        this.OnInitSuccess($"Bass v{Bass.Version} initialized");
+        this.InitSuccess.InvokeAndForget(this, EventArgs.Empty);
         this._logger?.LogInformation("BassBackend initialized");
         return ValueTask.FromResult(true);
     }

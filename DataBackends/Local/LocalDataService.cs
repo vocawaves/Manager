@@ -7,19 +7,33 @@ using Manager.Shared.Events.General;
 using Manager.Shared.Helpers;
 using Manager.Shared.Interfaces.Data;
 using Manager.Shared.Interfaces.General;
-using MetadataReader.FFMPEG;
 using Microsoft.Extensions.Logging;
 
 namespace Manager.DataBackends.Local;
 
-public class LocalDataService : ManagerComponent, IFileSystemSource, IAudioDataSource, IVideoDataSource, ISubtitleDataSource,
+public class LocalDataService : IManagerComponent<LocalDataServiceConfiguration>, IFileSystemSource, IAudioDataSource, IVideoDataSource, ISubtitleDataSource,
     IImageDataSource, IMiscDataSource
 {
     private readonly ILogger<LocalDataService>? _logger;
     private readonly ICacheStrategy _cacheStrategy;
 
-    public LocalDataService(ComponentManager componentManager, string name, ulong parent, IComponentConfiguration? configuration = null) : base(componentManager, name, parent, configuration)
+    #region IManagerComponent
+    
+    public event AsyncEventHandler? InitSuccess;
+    public event AsyncEventHandler<InitFailedEventArgs>? InitFailed;
+    
+    public bool Initialized { get; } = true;
+    public ComponentManager ComponentManager { get; }
+    public string Name { get; }
+    public ulong Parent { get; }
+    
+    #endregion
+
+    private LocalDataService(ComponentManager componentManager, string name, ulong parent, IComponentConfiguration? configuration = null)
     {
+        ComponentManager = componentManager;
+        Name = name;
+        Parent = parent;
         if (configuration is not LocalDataServiceConfiguration localConfig || localConfig.CacheStrategy is null)
         {
             var strategy = FolderCacheStrategy.Create(componentManager?.CreateLogger<FolderCacheStrategy>());
@@ -32,7 +46,17 @@ public class LocalDataService : ManagerComponent, IFileSystemSource, IAudioDataS
         _logger = this.ComponentManager.CreateLogger<LocalDataService>();
     }
 
-    public override ValueTask<bool> InitializeAsync(params string[] options)
+    public static IManagerComponent? Create(ComponentManager componentManager, string name, ulong parent)
+    {
+        return new LocalDataService(componentManager, name, parent);
+    }
+    
+    public static IManagerComponent<LocalDataServiceConfiguration>? CreateWithConfiguration(ComponentManager componentManager, string name, ulong parent, LocalDataServiceConfiguration configuration)
+    {
+        return new LocalDataService(componentManager, name, parent, configuration);
+    }
+
+    public ValueTask<bool> InitializeAsync(params string[] options)
     {
         return ValueTask.FromResult(true);
     }
@@ -179,4 +203,6 @@ public class LocalDataService : ManagerComponent, IFileSystemSource, IAudioDataS
     {
         return _cacheStrategy.GetCachedStreamAsync(item);
     }
+
+    public LocalDataServiceConfiguration? Configuration { get; }
 }

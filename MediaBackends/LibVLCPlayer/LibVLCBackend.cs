@@ -13,11 +13,21 @@ using Microsoft.Extensions.Logging;
 
 namespace Manager.MediaBackends.LibVLCPlayer;
 
-public class LibVLCBackend : ManagerComponent, IVideoBackendService, IAudioBackendService
+public class LibVLCBackend : IVideoBackendService, IAudioBackendService
 {
     public event AsyncEventHandler<GlobalDefaultVolumeChangedEventArgs>? GlobalVolumeChanged;
     public event AsyncEventHandler<GlobalAudioDeviceChangedEventArgs>? GlobalDeviceChanged;
 
+    #region IManagerComponent
+    
+    public event AsyncEventHandler? InitSuccess;
+    public event AsyncEventHandler<InitFailedEventArgs>? InitFailed;
+    public bool Initialized { get; private set; }
+    public ComponentManager ComponentManager { get; }
+    public string Name { get; }
+    public ulong Parent { get; }
+
+    #endregion
     
     private LibVLC? _internalLibVLC;
     private MediaPlayer? _internalMediaPlayer;
@@ -27,12 +37,20 @@ public class LibVLCBackend : ManagerComponent, IVideoBackendService, IAudioBacke
     
     private readonly ILogger<LibVLCBackend>? _logger;
 
-    public LibVLCBackend(ComponentManager componentManager, string name, ulong parent, IComponentConfiguration? configuration = null) : base(componentManager, name, parent, configuration)
+    private LibVLCBackend(ComponentManager componentManager, string name, ulong parent)
     {
+        this.ComponentManager = componentManager;
+        this.Name = name;
+        this.Parent = parent;
         this._logger = componentManager.CreateLogger<LibVLCBackend>();
-    } 
+    }
+    
+    public static IManagerComponent? Create(ComponentManager componentManager, string name, ulong parent)
+    {
+        return new LibVLCBackend(componentManager, name, parent);
+    }
 
-    public override ValueTask<bool> InitializeAsync(params string[] options)
+    public ValueTask<bool> InitializeAsync(params string[] options)
     {
         if (this.Initialized)
             return ValueTask.FromResult(true);
@@ -44,12 +62,12 @@ public class LibVLCBackend : ManagerComponent, IVideoBackendService, IAudioBacke
         }
         catch (Exception e)
         {
-            this.OnInitFailed(e.Message);
+            this.InitFailed?.InvokeAndForget(this, new InitFailedEventArgs(e));
             this._logger?.LogError(e, "Failed to initialize LibVLC");
             return ValueTask.FromResult(false);
         }
         this.Initialized = true;
-        this.OnInitSuccess("LibVLC initialized");
+        this.InitSuccess?.InvokeAndForget(this, EventArgs.Empty);
         return ValueTask.FromResult(true);
     }
    
