@@ -19,9 +19,5 @@
   <ItemGroup>
     <ProjectReference Include="$(SolutionDir)\UIs\SimplePlayer\SimplePlayer\SimplePlayer.csproj" />
   </ItemGroup>
-  
-  <ItemGroup>
-    <RdXml Include="rd.xml" />
-  </ItemGroup>
 
 </Project>

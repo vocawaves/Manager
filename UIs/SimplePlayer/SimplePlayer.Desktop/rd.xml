@@ -1,8 +1,0 @@
-﻿<Directives xmlns="http://schemas.microsoft.com/netfx/2013/01/metadata">
-    <Application>
-        <Assembly Name="Local" Dynamic="Required All" />
-        <Assembly Name="BassPlayer" Dynamic="Required All" />
-        <Assembly Name="LibVLCPlayer" Dynamic="Required All" />
-        <Assembly Name="Manager.SimplePlayer" Dynamic="Required All" />
-    </Application>
-</Directives>
