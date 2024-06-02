@@ -58,6 +58,8 @@ public class MediaPlayer : IManagerComponent
         }
     }
     
+    public IExternalPlayerSurface? VideoSurface { get; set; }
+    
     public MediaPlayer(ComponentManager componentManager, string name, ulong parent)
     {
         _logger = componentManager.CreateLogger<MediaPlayer>();
@@ -198,6 +200,22 @@ public class MediaPlayer : IManagerComponent
         
         ActiveMediaChannel = mediaChannel;
         SetUpEventHandlers(mediaChannel);
+        
+        if (mediaItem.ItemType == ItemType.Video && ActiveMediaChannel is IVideoChannel videoChannel)
+        {
+            if (VideoSurface == null)
+            {
+                _logger?.LogError("No video surface found.");
+                return false;
+            }
+            var couldSetSurface = await videoChannel.SetExternalVideoSurfaceAsync(VideoSurface);
+            if (!couldSetSurface)
+            {
+                _logger?.LogError("Failed to set video surface.");
+                return false;
+            }
+        }
+        
         var could = await mediaChannel.PlayAsync();
         return could;
     }

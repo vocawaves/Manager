@@ -22,6 +22,7 @@
             <StackPanel Orientation="Vertical"
                         HorizontalAlignment="Stretch">
                 <Expander HorizontalAlignment="Stretch"
+                          IsExpanded="True"
                           Header="Playlist Management">
                     <Grid ColumnDefinitions="*, *"
                           RowDefinitions="Auto, Auto, Auto, Auto, Auto, Auto, Auto">
@@ -90,6 +91,7 @@
                     </Grid>
                 </Expander>
                 <Expander HorizontalAlignment="Stretch"
+                          IsExpanded="True"
                           Header="Playback">
 
                     <Grid ColumnDefinitions="*, *"
@@ -117,7 +119,8 @@
                         <Button Grid.Column="1"
                                 Grid.Row="2"
                                 HorizontalAlignment="Stretch"
-                                HorizontalContentAlignment="Center">
+                                HorizontalContentAlignment="Center"
+                                Command="{Binding PauseResume}">
                             <TextBlock TextAlignment="Center"
                                        TextWrapping="Wrap"
                                        Text="Pause/ Resume" />
@@ -131,7 +134,8 @@
                         <Button Grid.Column="0"
                                 Grid.Row="4"
                                 HorizontalAlignment="Stretch"
-                                HorizontalContentAlignment="Center">
+                                HorizontalContentAlignment="Center"
+                                Command="{Binding OpenVideoPlayer}">
                             <TextBlock TextAlignment="Center"
                                        TextWrapping="Wrap"
                                        Text="Open Video Window" />
@@ -139,7 +143,8 @@
                         <Button Grid.Column="1"
                                 Grid.Row="4"
                                 HorizontalAlignment="Stretch"
-                                HorizontalContentAlignment="Center">
+                                HorizontalContentAlignment="Center"
+                                Command="{Binding FullscreenOrWindowed}">
                             <TextBlock TextAlignment="Center"
                                        TextWrapping="Wrap"
                                        Text="Fullscreen Toggle" />
@@ -216,14 +221,22 @@
         <Grid Grid.Column="0"
               Grid.ColumnSpan="2"
               Grid.Row="2"
-              ColumnDefinitions="*, *, 150, Auto, Auto">
+              ColumnDefinitions="2*, *, 150, 150, *, Auto, Auto">
 
             <TextBlock Grid.Column="0"
                        Margin="5,0"
                        VerticalAlignment="Center"
                        Text="{Binding RemainingTime, StringFormat='Remaining Time: {0}'}" />
+            
+            <TextBox Grid.Column="1"
+                     Watermark="Jump To Time"
+                     Text="{Binding JumpToTime}"/>
+            
+            <Button Grid.Column="2"
+                    Content="Jump"
+                    Command="{Binding DoJumpToTime}"/>
 
-            <NumericUpDown Grid.Column="2"
+            <NumericUpDown Grid.Column="4"
                            VerticalAlignment="Center"
                            VerticalContentAlignment="Center"
                            Minimum="1"
@@ -231,12 +244,12 @@
                            Value="8869"
                            Watermark="Port" />
 
-            <TextBlock Grid.Column="3"
+            <TextBlock Grid.Column="5"
                        Margin="5,0"
                        VerticalAlignment="Center"
                        Text="Enable API?" />
-            <ToggleSwitch Margin="5,0"
-                          Grid.Column="4" />
+            <ToggleSwitch Grid.Column="6"
+                          Margin="5,0" />
 
         </Grid>
 

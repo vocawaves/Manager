@@ -1,4 +1,5 @@
-﻿using LibVLCSharp.Shared;
+﻿using System.Diagnostics;
+using LibVLCSharp.Shared;
 using Manager.Shared.Entities;
 using Manager.Shared.Enums;
 using Manager.Shared.Events.Audio;
@@ -32,15 +33,18 @@ public class LibVLCChannel : IMediaChannel, IVideoChannel, IChannelSupportsAudio
     public IBackendService AssociatedBackend { get; }
     public MediaPlayer Player { get; }
     public MediaItem MediaItem { get; }
-    
+
     public TimeSpan? Position { get; private set; }
     public TimeSpan? Length { get; private set; }
-    
+
     public List<PositionTrigger> PositionTriggers { get; } = new();
     private readonly List<PositionTrigger> _positionTriggersAlreadyTriggered = new();
-    
+
     public List<MediaItem> AudioSlaves { get; } = new();
     public IExternalPlayerSurface? ExternalVideoSurface { get; private set; }
+
+    private Stopwatch _positionDeltaTimer = new();
+    private System.Timers.Timer _positionTimer = new(TimeSpan.FromMilliseconds(1000.0 / 60.0));
 
     public LibVLCChannel(IBackendService backend, MediaItem mediaItem, MediaPlayer player,
         ILogger<LibVLCChannel>? logger = null)
@@ -53,6 +57,7 @@ public class LibVLCChannel : IMediaChannel, IVideoChannel, IChannelSupportsAudio
             this._logger?.LogError("Media on player is null");
         else
             this.Length = TimeSpan.FromMilliseconds(player.Media.Duration);
+
         this.Position = TimeSpan.FromMilliseconds(player.Time);
         SetupEventHandlers();
     }
@@ -61,14 +66,29 @@ public class LibVLCChannel : IMediaChannel, IVideoChannel, IChannelSupportsAudio
     {
         this.Player.EndReached += (sender, args) =>
         {
+            this._positionDeltaTimer.Stop();
+            this._positionTimer.Stop();
             this.Ended?.InvokeAndForget(this, EventArgs.Empty);
             this.StateChanged?.InvokeAndForget(this, new ChannelStateChangedEventArgs(ChannelState.Ended));
             this._logger?.LogInformation("Media playback ended");
         };
         this.Player.TimeChanged += (sender, args) =>
         {
-            this.Position = TimeSpan.FromMilliseconds(args.Time);
-            this.PositionChanged?.InvokeAndForget(this, new ChannelPositionChangedEventArgs(this.Position.Value));
+            this._positionDeltaTimer.Restart();
+        };
+        this._positionTimer.Elapsed += (sender, args) =>
+        {
+            var pos = TimeSpan.FromMilliseconds(this.Player.Time);
+            this.Position = pos + this._positionDeltaTimer.Elapsed;
+            this.PositionChanged?.InvokeAndForget(this, new ChannelPositionChangedEventArgs(pos));
+            foreach (var trigger in this.PositionTriggers)
+            {
+                if (trigger.Position <= pos && !_positionTriggersAlreadyTriggered.Contains(trigger))
+                {
+                    this.PositionTriggerInvoked?.InvokeAndForget(this, new ChannelPositionTriggerInvokedEventArgs(trigger));
+                    _positionTriggersAlreadyTriggered.Add(trigger);
+                }
+            }
         };
     }
 
@@ -80,17 +100,27 @@ public class LibVLCChannel : IMediaChannel, IVideoChannel, IChannelSupportsAudio
     public async ValueTask<bool> PlayAsync()
     {
         var playTcs = new TaskCompletionSource<bool>();
+        var voutTcs = new TaskCompletionSource<bool>();
+
         void OnPlaying(object? sender, EventArgs e)
         {
             playTcs.SetResult(true);
             this.Player.Playing -= OnPlaying;
         }
 
+        void OnVout(object? sender, EventArgs e)
+        {
+            voutTcs.SetResult(true);
+            this.Player.Vout -= OnVout;
+        }
+
         try
         {
             this.Player.Playing += OnPlaying;
+            this.Player.Vout += OnVout;
             this.Player.Play();
-            await playTcs.Task.ConfigureAwait(false);
+            await Task.WhenAll(playTcs.Task, voutTcs.Task).ConfigureAwait(false);
+            _positionTimer.Start();
             this.Playing?.InvokeAndForget(this, EventArgs.Empty);
             this.StateChanged?.InvokeAndForget(this, new ChannelStateChangedEventArgs(ChannelState.Playing));
         }
@@ -101,6 +131,7 @@ public class LibVLCChannel : IMediaChannel, IVideoChannel, IChannelSupportsAudio
             return false;
         }
 
+        await Task.Yield();
         return true;
     }
 
@@ -116,12 +147,11 @@ public class LibVLCChannel : IMediaChannel, IVideoChannel, IChannelSupportsAudio
 
         try
         {
-            await await Task.Factory.StartNew(async () =>
-            {
-                this.Player.Paused += OnPaused;
-                this.Player.Pause();
-                await pauseTcs.Task;
-            });
+            this.Player.Paused += OnPaused;
+            this.Player.Pause();
+            await pauseTcs.Task.ConfigureAwait(false);
+            _positionDeltaTimer.Stop();
+            _positionTimer.Stop();
             this.Paused?.InvokeAndForget(this, EventArgs.Empty);
             this.StateChanged?.InvokeAndForget(this, new ChannelStateChangedEventArgs(ChannelState.Paused));
         }
@@ -132,6 +162,7 @@ public class LibVLCChannel : IMediaChannel, IVideoChannel, IChannelSupportsAudio
             return false;
         }
 
+        await Task.Yield();
         return true;
     }
 
@@ -147,12 +178,10 @@ public class LibVLCChannel : IMediaChannel, IVideoChannel, IChannelSupportsAudio
 
         try
         {
-            await await Task.Factory.StartNew(async () =>
-            {
-                this.Player.Playing += OnResumed;
-                this.Player.Play();
-                await resumeTcs.Task;
-            });
+            this.Player.Playing += OnResumed;
+            this.Player.Play();
+            await resumeTcs.Task.ConfigureAwait(false);
+            _positionTimer.Start();
             this.Resumed?.InvokeAndForget(this, EventArgs.Empty);
             this.StateChanged?.InvokeAndForget(this, new ChannelStateChangedEventArgs(ChannelState.Playing));
         }
@@ -163,6 +192,7 @@ public class LibVLCChannel : IMediaChannel, IVideoChannel, IChannelSupportsAudio
             return false;
         }
 
+        await Task.Yield();
         return true;
     }
 
@@ -178,13 +208,11 @@ public class LibVLCChannel : IMediaChannel, IVideoChannel, IChannelSupportsAudio
 
         try
         {
-            await await Task.Factory.StartNew(async () =>
-            {
-                this.Player.Stopped += OnStopped;
-                this.Player.Stop();
-                await stopTcs.Task;
-            });
-            //TODO: check if IsPlayReady needs to be reset here
+            this.Player.Stopped += OnStopped;
+            this.Player.Stop();
+            await stopTcs.Task.ConfigureAwait(false);
+            _positionDeltaTimer.Stop();
+            _positionTimer.Stop();
             this.Stopped?.InvokeAndForget(this, EventArgs.Empty);
             this.StateChanged?.InvokeAndForget(this, new ChannelStateChangedEventArgs(ChannelState.Stopped));
         }
@@ -194,6 +222,7 @@ public class LibVLCChannel : IMediaChannel, IVideoChannel, IChannelSupportsAudio
             return false;
         }
 
+        await Task.Yield();
         return true;
     }
 
@@ -227,29 +256,43 @@ public class LibVLCChannel : IMediaChannel, IVideoChannel, IChannelSupportsAudio
 
     public ValueTask<TimeSpan?> GetPositionAsync()
     {
-        var pos = this.Player.Time;
-        return ValueTask.FromResult<TimeSpan?>(TimeSpan.FromMilliseconds(pos));
+        var pos = TimeSpan.FromMilliseconds(this.Player.Time + this._positionDeltaTimer.Elapsed.TotalMilliseconds);
+        return ValueTask.FromResult<TimeSpan?>(pos);
     }
 
     public async ValueTask<bool> SetPositionAsync(double positionMs)
     {
-        //TODO: Not sure if TimeChanged will have the right time for this check, maybe also allow if it's within a certain range?
-        var posChanged = new TaskCompletionSource<bool>();
-
-        void OnPositionChanged(object? sender, MediaPlayerTimeChangedEventArgs e)
+        var preSeekState = await this.GetStateAsync().ConfigureAwait(false);
+        var preSeekPos = await this.GetPositionAsync().ConfigureAwait(false);
+        if (preSeekPos == null)
         {
-            if (e.Time != (long)positionMs)
-                return;
-            posChanged.SetResult(true);
-            this.Player.TimeChanged -= OnPositionChanged;
+            this._logger?.LogError("Failed to get current media position");
+            return false;
         }
 
-        this.Player.TimeChanged += OnPositionChanged;
-        await await Task.Factory.StartNew(async () =>
+        if (preSeekState == ChannelState.Playing)
         {
-            this.Player.Time = (long)positionMs;
-            await posChanged.Task;
-        });
+            var couldPause = await this.PauseAsync().ConfigureAwait(false);
+            if (!couldPause)
+            {
+                this._logger?.LogError("Failed to pause media");
+                return false;
+            }
+        }
+
+        this.Player.Time = (long)positionMs;
+
+        if (preSeekState == ChannelState.Playing)
+        {
+            var couldResume = await this.ResumeAsync().ConfigureAwait(false);
+            if (!couldResume)
+            {
+                this._logger?.LogError("Failed to resume media");
+                return false;
+            }
+        }
+
+        this._logger?.LogInformation("Media position set to {0}", positionMs);
         return true;
     }
 
@@ -274,20 +317,31 @@ public class LibVLCChannel : IMediaChannel, IVideoChannel, IChannelSupportsAudio
         return ValueTask.FromResult<TimeSpan?>(TimeSpan.FromMilliseconds(len));
     }
 
-    public ValueTask<bool> SetExternalVideoSurfaceAsync(IExternalPlayerSurface surface)
+    public async ValueTask<bool> SetExternalVideoSurfaceAsync(IExternalPlayerSurface surface)
     {
         if (this.ExternalVideoSurface == surface)
         {
-            return ValueTask.FromResult(true);
+            this._logger?.LogInformation("Surface is already set to the player");
+            return true;
         }
 
         if (surface is not IVLCVideoControl vlcControl)
-            return ValueTask.FromResult(false);
+        {
+            this._logger?.LogError("Surface is not a VLC video control");
+            return false;
+        }
 
-        
+        var couldSet = await vlcControl.SetPlayerToControlAsync(this.Player);
+        if (!couldSet)
+        {
+            this._logger?.LogError("Failed to set player to control");
+            return false;
+        }
+
         this.ExternalVideoSurface = vlcControl;
         this.ExternalVideoSurfaceChanged?.InvokeAndForget(this, new ExternalPlayerSurfaceChangedEventArgs(surface));
-        return ValueTask.FromResult(true);
+        this._logger?.LogInformation("External video surface set to this channels player");
+        return true;
     }
 
 
@@ -295,6 +349,9 @@ public class LibVLCChannel : IMediaChannel, IVideoChannel, IChannelSupportsAudio
     {
         this.Player.Media?.Dispose();
         this.Player.Dispose();
+        this._positionTimer.Stop();
+        this._positionTimer.Dispose();
+        this._positionDeltaTimer.Stop();
         return ValueTask.FromResult(true);
     }
 

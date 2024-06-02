@@ -15,7 +15,6 @@ namespace Manager.MediaBackends.LibVLCPlayer;
 
 public class LibVLCBackend : IVideoBackendService, IAudioBackendService
 {
-
     #region IManagerComponent
     
     public event AsyncEventHandler? InitSuccess;
@@ -53,7 +52,7 @@ public class LibVLCBackend : IVideoBackendService, IAudioBackendService
         try
         {
             Core.Initialize();
-            _internalLibVLC = new LibVLC();
+            _internalLibVLC = new LibVLC("--quiet");
             _internalMediaPlayer = new MediaPlayer(_internalLibVLC);
         }
         catch (Exception e)
@@ -64,6 +63,7 @@ public class LibVLCBackend : IVideoBackendService, IAudioBackendService
         }
         this.Initialized = true;
         this.InitSuccess?.InvokeAndForget(this, EventArgs.Empty);
+        this._logger?.LogInformation("LibVLC initialized");
         return ValueTask.FromResult(true);
     }
    
@@ -94,6 +94,7 @@ public class LibVLCBackend : IVideoBackendService, IAudioBackendService
         }
         
         var media = new Media(_internalLibVLC, path);
+        media.AddOption("image-duration=30");
         var channelPlayer = new MediaPlayer(media);
         if (channelPlayer.Media == null)
         {

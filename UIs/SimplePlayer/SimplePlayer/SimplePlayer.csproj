@@ -23,5 +23,6 @@
 
   <ItemGroup>
     <ProjectReference Include="$(SolutionDir)\Manager.SimplePlayer\Manager.SimplePlayer.csproj" />
+    <ProjectReference Include="..\..\..\MediaBackends\UI\LibVLCPlayer.Avalonia\LibVLCPlayer.Avalonia.csproj" />
   </ItemGroup>
 </Project>

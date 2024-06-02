@@ -4,18 +4,44 @@ using Avalonia.Platform;
 using LibVLCSharp.Shared;
 using Manager.MediaBackends.LibVLCPlayer;
 using Manager.Shared;
+using Manager.Shared.Events.General;
+using Manager.Shared.Helpers;
+using Manager.Shared.Interfaces.General;
 using Microsoft.Extensions.Logging;
 
 namespace Manager.MediaBackends.UI.LibVLCPlayer.Avalonia;
 
-public class VLCVideoControl : NativeControlHost, IVLCVideoControl
+public class VLCVideoControl : NativeControlHost, IManagerComponent, IVLCVideoControl
 {
+    #region IManagerComponent
+
+    public event AsyncEventHandler? InitSuccess;
+    public event AsyncEventHandler<InitFailedEventArgs>? InitFailed;
+    public ComponentManager ComponentManager { get; }
+    
+    string IManagerComponent.Name => ManComName;
+    public string ManComName { get; private set; }
+
+    bool IManagerComponent.Initialized => ManComInitialized;
+    public bool ManComInitialized { get; } = true;
+    
+    ulong IManagerComponent.Parent => ManComParent;
+    public ulong ManComParent { get; private set; }
+
+    #endregion
+
     private readonly ILogger<VLCVideoControl>? _logger;
     private IPlatformHandle? _platformHandle;
-    private readonly LibVLCChannel _channel;
-    public MediaPlayer MediaPlayer { get; }
 
-    public bool IsPlayReady { get; private set; }
+    public static readonly StyledProperty<MediaPlayer?> CurrentPlayerProperty =
+        AvaloniaProperty.Register<VLCVideoControl, MediaPlayer?>(
+            nameof(CurrentPlayer));
+
+    public MediaPlayer? CurrentPlayer
+    {
+        get => GetValue(CurrentPlayerProperty);
+        set => SetValue(CurrentPlayerProperty, value);
+    }
 
     private string _surfaceName = "VLCVideoControl";
 
@@ -29,31 +55,45 @@ public class VLCVideoControl : NativeControlHost, IVLCVideoControl
         set => SetAndRaise(SurfaceNameProperty, ref _surfaceName, value);
     }
 
-    public VLCVideoControl(ComponentManager componentManager, string? name, LibVLCChannel channel)
+    public VLCVideoControl(ComponentManager componentManager, string name, ulong parent)
     {
+        this.ComponentManager = componentManager;
+        this.ManComName = name;
+        this.ManComParent = parent;
         this._logger = componentManager.CreateLogger<VLCVideoControl>();
-        this._channel = channel;
-        this.MediaPlayer = channel.Player;
-        this.SurfaceName = name ?? "VLCVideoControl";
+    }
+
+    public ValueTask<bool> InitializeAsync(params string[] options)
+    {
+        return ValueTask.FromResult(true);
+    }
+    
+    public ValueTask<bool> SetPlayerToControlAsync(object playerObj)
+    {
+        if (playerObj is not MediaPlayer player) 
+            return ValueTask.FromResult(false);
+        if (Equals(this.CurrentPlayer, player)) 
+            return ValueTask.FromResult(true);
+        this.CurrentPlayer = player;
+        if (this._platformHandle != null) 
+            this.CreateNativeControlCore(this._platformHandle);
+        return ValueTask.FromResult(true);
     }
 
     protected override IPlatformHandle CreateNativeControlCore(IPlatformHandle parent)
     {
         var handle = parent.Handle;
         this._platformHandle = parent;
-        this._channel.Player.Hwnd = handle;
+        if (this.CurrentPlayer != null)
+            this.CurrentPlayer.Hwnd = handle;
         return base.CreateNativeControlCore(parent);
     }
 
     protected override void DestroyNativeControlCore(IPlatformHandle control)
     {
         this._platformHandle = null;
-        this._channel.Player.Hwnd = IntPtr.Zero;
+        if (this.CurrentPlayer != null)
+            this.CurrentPlayer.Hwnd = IntPtr.Zero;
         base.DestroyNativeControlCore(control);
-    }
-
-    public IntPtr? GetNativeReference()
-    {
-        return this._platformHandle?.Handle;
     }
 }

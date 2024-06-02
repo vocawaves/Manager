@@ -140,7 +140,7 @@ public class LocalDataService : IManagerComponent<LocalDataServiceConfiguration>
                 type = ItemType.Misc;
         }
         
-        var pathTitle = Path.GetFileNameWithoutExtension(uri);
+        var pathTitle = Path.GetFileName(uri);
         var item = new MediaItem(this, type, Parent, uri, pathTitle, this.ComponentManager.CreateLogger<MediaItem>());
         return item;
     }
