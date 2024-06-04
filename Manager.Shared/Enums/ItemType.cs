@@ -1,5 +1,6 @@
 ﻿namespace Manager.Shared.Enums;
 
+[Flags]
 public enum ItemType
 {
     Guess = 0,

@@ -67,8 +67,7 @@ public class BassChannel : IAudioChannel
             this.Ended?.InvokeAndForget(this, EventArgs.Empty);
             this.StateChanged?.InvokeAndForget(this, new ChannelStateChangedEventArgs(ChannelState.Ended));
             this._positionTimer.Stop();
-            var chanLength = Bass.ChannelBytes2Seconds(_bassChannel, Bass.ChannelGetLength(_bassChannel));
-            this.PositionChanged?.InvokeAndForget(this, new ChannelPositionChangedEventArgs(TimeSpan.FromSeconds(chanLength)));
+            this.PositionChanged?.InvokeAndForget(this, new ChannelPositionChangedEventArgs(this.Length ?? TimeSpan.Zero));
             this._logger?.LogInformation("End sync for channel {channel} invoked", _bassChannel);
         }, IntPtr.Zero);
         if (syncHandle == 0)
@@ -143,9 +142,9 @@ public class BassChannel : IAudioChannel
             return ValueTask.FromResult(false);
         }
         
+        this._positionTimer.Stop();
         this.Stopped?.InvokeAndForget(this, EventArgs.Empty);
         this.StateChanged?.InvokeAndForget(this, new ChannelStateChangedEventArgs(ChannelState.Stopped));
-        this._positionTimer.Stop();
         this._logger?.LogInformation("Stopped channel {channel}", _bassChannel);
         return ValueTask.FromResult(true);
     }

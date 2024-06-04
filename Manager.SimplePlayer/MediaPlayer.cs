@@ -201,7 +201,7 @@ public class MediaPlayer : IManagerComponent
         ActiveMediaChannel = mediaChannel;
         SetUpEventHandlers(mediaChannel);
         
-        if (mediaItem.ItemType == ItemType.Video && ActiveMediaChannel is IVideoChannel videoChannel)
+        if (mediaItem.ItemType is ItemType.Video or ItemType.Image && ActiveMediaChannel is IVideoChannel videoChannel)
         {
             if (VideoSurface == null)
             {

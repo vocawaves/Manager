@@ -6,6 +6,12 @@
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="SimplePlayer.Views.VideoPlayerWindow"
         Title="VideoPlayerWindow"
-        x:DataType="viewModels:MainViewModel">
-        <UserControl Content="{Binding VideoControl}"/>
+        x:DataType="viewModels:MainViewModel"
+        Background="Black">
+    <Grid>
+        <UserControl IsVisible="{Binding VideoPlayerVisible}"
+                     Content="{Binding VideoControl}"/>
+        <Image Stretch="Uniform"
+               Source="{Binding VideoPlayerWindowBackground}"/>
+    </Grid>
 </Window>

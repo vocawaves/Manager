@@ -11,11 +11,10 @@ public partial class PlaylistModel : ObservableObject
     
     public ObservableCollection<PlaylistItemModel> PlaylistItems { get; } = new();
 
-    private ObservableCollection<PlaylistModel> _parentCollection;
+    public ObservableCollection<PlaylistModel>? ParentCollection { get; set; }
     
-    public PlaylistModel(ObservableCollection<PlaylistModel> parentCollection, string name, bool isRemovable = true)
+    public PlaylistModel(string name, bool isRemovable = true)
     {
-        _parentCollection = parentCollection;
         _name = name;
         IsRemovable = isRemovable;
     }
@@ -27,6 +26,6 @@ public partial class PlaylistModel : ObservableObject
     
     public void Remove()
     {
-        _parentCollection.Remove(this);
+        ParentCollection?.Remove(this);
     }
 }

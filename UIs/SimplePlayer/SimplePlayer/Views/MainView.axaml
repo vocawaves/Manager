@@ -7,11 +7,6 @@
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="SimplePlayer.Views.MainView"
              x:DataType="vm:MainViewModel">
-    <Design.DataContext>
-        <!-- This only sets the DataContext for the previewer in an IDE,
-         to set the actual DataContext for runtime, set the DataContext property in code (look at App.axaml.cs) -->
-        <vm:MainViewModel />
-    </Design.DataContext>
 
     <Grid ColumnDefinitions="250, *"
           RowDefinitions="*, Auto, Auto">
@@ -50,12 +45,16 @@
                                 Grid.Row="2"
                                 HorizontalAlignment="Stretch"
                                 HorizontalContentAlignment="Center"
-                                Content="Save" />
+                                Content="Save" 
+                                Command="{Binding SavePlaylist}"
+                                CommandParameter="{Binding $parent[Window]}"/>
                         <Button Grid.Column="1"
                                 Grid.Row="2"
                                 HorizontalAlignment="Stretch"
                                 HorizontalContentAlignment="Center"
-                                Content="Save All" />
+                                Content="Save All" 
+                                Command="{Binding SaveAllPlaylists}"
+                                CommandParameter="{Binding $parent[Window]}"/>
                         <Separator Grid.Column="0"
                                    Grid.Row="3"
                                    Margin="0,5" />
@@ -66,12 +65,16 @@
                                 Grid.Row="4"
                                 HorizontalAlignment="Stretch"
                                 HorizontalContentAlignment="Center"
-                                Content="Load" />
+                                Content="Load" 
+                                Command="{Binding LoadPlaylist}"
+                                CommandParameter="{Binding $parent[Window]}"/>
                         <Button Grid.Column="1"
                                 Grid.Row="4"
                                 HorizontalAlignment="Stretch"
                                 HorizontalContentAlignment="Center"
-                                Content="Load All" />
+                                Content="Load All" 
+                                Command="{Binding LoadAllPlaylists}"
+                                CommandParameter="{Binding $parent[Window]}"/>
                         <Separator Grid.Column="0"
                                    Grid.Row="5"
                                    Margin="0,5" />
@@ -95,7 +98,7 @@
                           Header="Playback">
 
                     <Grid ColumnDefinitions="*, *"
-                          RowDefinitions="Auto, Auto, Auto, Auto, Auto">
+                          RowDefinitions="Auto, Auto, Auto, Auto, Auto, Auto, Auto">
                         <Button Grid.Column="0"
                                 Grid.ColumnSpan="2"
                                 Grid.Row="0"
@@ -115,7 +118,8 @@
                                 HorizontalContentAlignment="Center"
                                 VerticalAlignment="Stretch"
                                 VerticalContentAlignment="Center"
-                                Content="Stop" />
+                                Content="Stop" 
+                                Command="{Binding Stop}"/>
                         <Button Grid.Column="1"
                                 Grid.Row="2"
                                 HorizontalAlignment="Stretch"
@@ -135,6 +139,7 @@
                                 Grid.Row="4"
                                 HorizontalAlignment="Stretch"
                                 HorizontalContentAlignment="Center"
+                                IsEnabled="{Binding CanOpenVideoPlayer}"
                                 Command="{Binding OpenVideoPlayer}">
                             <TextBlock TextAlignment="Center"
                                        TextWrapping="Wrap"
@@ -144,10 +149,29 @@
                                 Grid.Row="4"
                                 HorizontalAlignment="Stretch"
                                 HorizontalContentAlignment="Center"
+                                IsEnabled="{Binding !CanOpenVideoPlayer}"
                                 Command="{Binding FullscreenOrWindowed}">
                             <TextBlock TextAlignment="Center"
                                        TextWrapping="Wrap"
                                        Text="Fullscreen Toggle" />
+                        </Button>
+                        <Separator Grid.Column="0"
+                                   Grid.Row="5"
+                                   Margin="0,5" />
+                        <Separator Grid.Column="1"
+                                   Grid.Row="5"
+                                   Margin="0,5" />
+                        <Button Grid.Column="0"
+                                Grid.ColumnSpan="2"
+                                Grid.Row="6"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Center"
+                                IsEnabled="{Binding !CanOpenVideoPlayer}"
+                                Command="{Binding SetVideoBackground}"
+                                CommandParameter="{Binding $parent[Window]}">
+                            <TextBlock TextAlignment="Center"
+                                       TextWrapping="Wrap"
+                                       Text="Set Video BG" />
                         </Button>
                     </Grid>
                 </Expander>
@@ -160,7 +184,8 @@
               Grid.RowSpan="2"
               RowDefinitions="Auto, *">
             <TabStrip Grid.Row="0"
-                      ItemsSource="{Binding Playlists}">
+                      ItemsSource="{Binding Playlists}"
+                      SelectedItem="{Binding SelectedPlaylist}">
                 <TabStrip.ItemsPanel>
                     <ItemsPanelTemplate>
                         <WrapPanel Orientation="Horizontal" />
@@ -170,8 +195,14 @@
                     <DataTemplate DataType="models:PlaylistModel">
                         <StackPanel Orientation="Horizontal"
                                     Spacing="5">
-                            <TextBlock Text="{Binding Name}" />
+                            <TextBlock VerticalAlignment="Center"
+                                       Text="{Binding Name}" />
                             <Button Content="X"
+                                    FontSize="8"
+                                    Height="30"
+                                    Width="30"
+                                    HorizontalContentAlignment="Center"
+                                    VerticalContentAlignment="Center"
                                     IsVisible="{Binding IsRemovable}"
                                     Command="{Binding Remove}" />
                         </StackPanel>
