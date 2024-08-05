@@ -6,6 +6,8 @@ namespace Manager.Shared;
 
 public class ComponentManager
 {
+    public static ComponentManager? MainInstance { get; private set; }
+    
     private readonly ILoggerFactory? _loggerFactory;
     private readonly ILogger<ComponentManager>? _logger;
 
@@ -16,6 +18,7 @@ public class ComponentManager
         _loggerFactory = loggerFactory;
         if (loggerFactory != null)
             _logger = loggerFactory.CreateLogger<ComponentManager>();
+        MainInstance ??= this;
     }
 
     public T? CreateComponent<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] T>(

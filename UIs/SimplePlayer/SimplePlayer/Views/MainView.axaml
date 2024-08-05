@@ -4,9 +4,36 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="clr-namespace:SimplePlayer.ViewModels"
              xmlns:models="clr-namespace:SimplePlayer.Models"
+             xmlns:i="clr-namespace:Avalonia.Xaml.Interactivity;assembly=Avalonia.Xaml.Interactivity"
+             xmlns:id="clr-namespace:Avalonia.Xaml.Interactions.Draggable;assembly=Avalonia.Xaml.Interactions.Draggable"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="SimplePlayer.Views.MainView"
-             x:DataType="vm:MainViewModel">
+             x:DataType="vm:MainViewModel"
+             DragDrop.AllowDrop="True">
+
+    <UserControl.Styles>
+        <StyleInclude Source="avares://Avalonia.Xaml.Interactions.Draggable/Styles.axaml" />
+        <Style Selector=":is(TabStrip).draggable">
+            <Setter Property="ItemsPanel">
+                <ItemsPanelTemplate>
+                    <WrapPanel Orientation="Horizontal" />
+                </ItemsPanelTemplate>
+            </Setter>
+        </Style>
+        <Style Selector=":is(TabStrip).draggable > :is(TabStripItem)">
+            <Setter Property="ZIndex" Value="0" />
+            <Setter Property="(i:Interaction.Behaviors)">
+                <i:BehaviorCollectionTemplate>
+                    <i:BehaviorCollection>
+                        <id:ItemDragBehavior HorizontalDragThreshold="3" VerticalDragThreshold="3" />
+                    </i:BehaviorCollection>
+                </i:BehaviorCollectionTemplate>
+            </Setter>
+        </Style>
+        <Style Selector=":is(TabStrip).draggable > :is(TabStripItem):pressed">
+            <Setter Property="ZIndex" Value="1" />
+        </Style>
+    </UserControl.Styles>
 
     <Grid ColumnDefinitions="250, *"
           RowDefinitions="*, Auto, Auto">
@@ -15,9 +42,9 @@
                       Grid.Row="0">
 
             <StackPanel Orientation="Vertical"
-                        HorizontalAlignment="Stretch">
+                        HorizontalAlignment="Stretch"
+                        Spacing="5">
                 <Expander HorizontalAlignment="Stretch"
-                          IsExpanded="True"
                           Header="Playlist Management">
                     <Grid ColumnDefinitions="*, *"
                           RowDefinitions="Auto, Auto, Auto, Auto, Auto, Auto, Auto">
@@ -45,16 +72,16 @@
                                 Grid.Row="2"
                                 HorizontalAlignment="Stretch"
                                 HorizontalContentAlignment="Center"
-                                Content="Save" 
+                                Content="Save"
                                 Command="{Binding SavePlaylist}"
-                                CommandParameter="{Binding $parent[Window]}"/>
+                                CommandParameter="{Binding $parent[Window]}" />
                         <Button Grid.Column="1"
                                 Grid.Row="2"
                                 HorizontalAlignment="Stretch"
                                 HorizontalContentAlignment="Center"
-                                Content="Save All" 
+                                Content="Save All"
                                 Command="{Binding SaveAllPlaylists}"
-                                CommandParameter="{Binding $parent[Window]}"/>
+                                CommandParameter="{Binding $parent[Window]}" />
                         <Separator Grid.Column="0"
                                    Grid.Row="3"
                                    Margin="0,5" />
@@ -65,16 +92,16 @@
                                 Grid.Row="4"
                                 HorizontalAlignment="Stretch"
                                 HorizontalContentAlignment="Center"
-                                Content="Load" 
+                                Content="Load"
                                 Command="{Binding LoadPlaylist}"
-                                CommandParameter="{Binding $parent[Window]}"/>
+                                CommandParameter="{Binding $parent[Window]}" />
                         <Button Grid.Column="1"
                                 Grid.Row="4"
                                 HorizontalAlignment="Stretch"
                                 HorizontalContentAlignment="Center"
-                                Content="Load All" 
+                                Content="Load All"
                                 Command="{Binding LoadAllPlaylists}"
-                                CommandParameter="{Binding $parent[Window]}"/>
+                                CommandParameter="{Binding $parent[Window]}" />
                         <Separator Grid.Column="0"
                                    Grid.Row="5"
                                    Margin="0,5" />
@@ -85,20 +112,30 @@
                                 Grid.Row="6"
                                 HorizontalAlignment="Stretch"
                                 HorizontalContentAlignment="Center"
-                                Content="Clear List" />
+                                Content="Clear List"
+                                Command="{Binding ClearPlaylist}" />
                         <Button Grid.Column="1"
                                 Grid.Row="6"
                                 HorizontalAlignment="Stretch"
                                 HorizontalContentAlignment="Center"
-                                Content="Save Scratch" />
+                                Content="Save Scratch"
+                                Command="{Binding SaveScratch}"
+                                CommandParameter="{Binding $parent[Window]}" />
                     </Grid>
+
+                    <Expander.Styles>
+                        <Style Selector="Expander:not(:expanded) /template/ Border#ExpanderContent">
+                            <Setter Property="IsVisible" Value="True" />
+                            <Setter Property="Height" Value="50" />
+                        </Style>
+                    </Expander.Styles>
+
                 </Expander>
                 <Expander HorizontalAlignment="Stretch"
-                          IsExpanded="True"
                           Header="Playback">
 
                     <Grid ColumnDefinitions="*, *"
-                          RowDefinitions="Auto, Auto, Auto, Auto, Auto, Auto, Auto">
+                          RowDefinitions="Auto, Auto, Auto, Auto, Auto, Auto, Auto, Auto">
                         <Button Grid.Column="0"
                                 Grid.ColumnSpan="2"
                                 Grid.Row="0"
@@ -118,8 +155,8 @@
                                 HorizontalContentAlignment="Center"
                                 VerticalAlignment="Stretch"
                                 VerticalContentAlignment="Center"
-                                Content="Stop" 
-                                Command="{Binding Stop}"/>
+                                Content="Stop"
+                                Command="{Binding Stop}" />
                         <Button Grid.Column="1"
                                 Grid.Row="2"
                                 HorizontalAlignment="Stretch"
@@ -173,8 +210,61 @@
                                        TextWrapping="Wrap"
                                        Text="Set Video BG" />
                         </Button>
+                        <Button Grid.Column="0"
+                                Grid.ColumnSpan="2"
+                                Grid.Row="7"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Center"
+                                IsEnabled="{Binding !CanOpenVideoPlayer}"
+                                Command="{Binding ClearVideoBackground}">
+                            <TextBlock TextAlignment="Center"
+                                       TextWrapping="Wrap"
+                                       Text="Clear Video BG" />
+                        </Button>
                     </Grid>
+                    <Expander.Styles>
+                        <Style Selector="Expander:not(:expanded) /template/ Border#ExpanderContent">
+                            <Setter Property="IsVisible" Value="True" />
+                            <Setter Property="Height" Value="108" />
+                        </Style>
+                    </Expander.Styles>
                 </Expander>
+                <Button HorizontalAlignment="Center"
+                        Content="Open SoundBoard"
+                        Command="{Binding OpenSoundBoard}"/>
+                <Separator Height="2"
+                           Width="50"
+                           HorizontalAlignment="Center" />
+                <TextBlock Margin="5,0"
+                           Text="Current Media:"
+                           FontWeight="SemiBold" />
+                <TextBlock Margin="5,0"
+                           Text="{Binding CurrentMedia }"
+                           ToolTip.Tip="{Binding CurrentMedia}" />
+                <Separator Height="2"
+                           Width="50"
+                           HorizontalAlignment="Center" />
+                <CheckBox Margin="5,0"
+                          Content="Controls On Top?"
+                          IsChecked="{Binding ControlsOnTop}" />
+                <CheckBox Margin="5,0"
+                          Content="Video On Top?"
+                          IsChecked="{Binding VideoOnTop}" />
+                <Separator Height="2"
+                           Width="50"
+                           HorizontalAlignment="Center" />
+                <TextBlock Margin="5,0"
+                           Text="Loop Mode:"
+                           FontWeight="SemiBold" />
+                <Slider Margin="5,0"
+                        Minimum="0"
+                        Maximum="2"
+                        IsSnapToTickEnabled="True"
+                        TickPlacement="BottomRight"
+                        TickFrequency="1"
+                        Value="{Binding RepeatMode}"/>
+                <TextBlock Margin="5,0"
+                           Text="{Binding RepeatModeString}" />
             </StackPanel>
 
         </ScrollViewer>
@@ -184,6 +274,7 @@
               Grid.RowSpan="2"
               RowDefinitions="Auto, *">
             <TabStrip Grid.Row="0"
+                      Classes="draggable"
                       ItemsSource="{Binding Playlists}"
                       SelectedItem="{Binding SelectedPlaylist}">
                 <TabStrip.ItemsPanel>
@@ -195,8 +286,16 @@
                     <DataTemplate DataType="models:PlaylistModel">
                         <StackPanel Orientation="Horizontal"
                                     Spacing="5">
-                            <TextBlock VerticalAlignment="Center"
+                            <TextBlock Name="PlaylistNameText"
+                                       VerticalAlignment="Center"
+                                       DoubleTapped="PlaylistTab_OnDoubleTapped"
                                        Text="{Binding Name}" />
+                            <TextBox Name="PlaylistNameEdit"
+                                     VerticalAlignment="Center"
+                                     IsVisible="False"
+                                     KeyDown="PlaylistNameEdit_OnKeyDown"
+                                     LostFocus="PlaylistNameEdit_OnLostFocus"
+                                     Text="{Binding Name}" />
                             <Button Content="X"
                                     FontSize="8"
                                     Height="30"
@@ -211,6 +310,7 @@
             </TabStrip>
 
             <ListBox Grid.Row="1"
+                     Classes="draggable"
                      SelectedItem="{Binding SelectedPlaylistItem}"
                      ItemsSource="{Binding SelectedPlaylist.PlaylistItems}">
                 <ListBox.ItemTemplate>
@@ -219,7 +319,8 @@
                                 Padding="12,9,12,12"
                                 Background="Transparent"
                                 HorizontalAlignment="Stretch"
-                                VerticalAlignment="Stretch">
+                                VerticalAlignment="Stretch"
+                                DoubleTapped="PlaylistItem_OnDoubleTapped">
                             <Grid ColumnDefinitions="*, Auto, Auto">
                                 <TextBlock Grid.Column="0"
                                            VerticalAlignment="Center"
@@ -228,7 +329,8 @@
                                 <TextBlock Grid.Column="1"
                                            Margin="10,0"
                                            VerticalAlignment="Center"
-                                           Text="BPM would be here" />
+                                           IsVisible="{Binding HasBPM}"
+                                           Text="{Binding Bpm, StringFormat='BPM: {0}'}" />
 
                                 <Button Grid.Column="2"
                                         Content="X"
@@ -252,35 +354,50 @@
         <Grid Grid.Column="0"
               Grid.ColumnSpan="2"
               Grid.Row="2"
-              ColumnDefinitions="2*, *, 150, 150, *, Auto, Auto">
+              ColumnDefinitions="Auto, *, Auto, Auto, Auto, Auto, Auto, Auto">
 
             <TextBlock Grid.Column="0"
                        Margin="5,0"
                        VerticalAlignment="Center"
-                       Text="{Binding RemainingTime, StringFormat='Remaining Time: {0}'}" />
-            
-            <TextBox Grid.Column="1"
-                     Watermark="Jump To Time"
-                     Text="{Binding JumpToTime}"/>
-            
-            <Button Grid.Column="2"
-                    Content="Jump"
-                    Command="{Binding DoJumpToTime}"/>
+                       Text="{Binding RemainingTime, StringFormat='Remaining Time: {0:mm\\:ss}'}" />
 
-            <NumericUpDown Grid.Column="4"
+            <TextBlock Grid.Column="1"
+                       Margin="0,0,5,0"
+                       HorizontalAlignment="Left"
+                       VerticalAlignment="Center"
+                       Text="{Binding Duration, StringFormat='| {0:mm\\:ss}'}" />
+
+            <TextBox Grid.Column="2"
+                     Width="100"
+                     Watermark="Jump To Time"
+                     Text="{Binding JumpToTime}" />
+
+            <Button Grid.Column="3"
+                    Content="Jump"
+                    Command="{Binding DoJumpToTime}" />
+
+            <Separator Grid.Column="4"
+                       Height="10"
+                       Width="2" />
+
+            <NumericUpDown Grid.Column="5"
                            VerticalAlignment="Center"
                            VerticalContentAlignment="Center"
+                           Width="200"
                            Minimum="1"
+                           Increment="1"
+                           ParsingNumberStyle="Integer"
                            Maximum="99999"
-                           Value="8869"
+                           Value="{Binding ApiPort}"
                            Watermark="Port" />
 
-            <TextBlock Grid.Column="5"
+            <TextBlock Grid.Column="6"
                        Margin="5,0"
                        VerticalAlignment="Center"
-                       Text="Enable API?" />
-            <ToggleSwitch Grid.Column="6"
-                          Margin="5,0" />
+                       Text="API? (SFX +1)" />
+            <ToggleSwitch Grid.Column="7"
+                          Margin="5,0"
+                          IsChecked="{Binding ApiEnabled}" />
 
         </Grid>
 

@@ -5,9 +5,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Threading.Tasks;
 using Manager.Shared;
-using Manager.Shared.Events.General;
 using Manager.Shared.Extensions;
-using Manager.Shared.Helpers;
 using Manager.Shared.Interfaces.Data;
 using Manager.Shared.Interfaces.General;
 using Microsoft.Extensions.Logging;
@@ -18,9 +16,6 @@ namespace SimplePlayer.Utilities;
 public class PlaylistIO : IManagerComponent
 {
     private readonly ILogger<PlaylistIO>? _logger;
-    public event AsyncEventHandler? InitSuccess;
-    public event AsyncEventHandler<InitFailedEventArgs>? InitFailed;
-    public bool Initialized { get; } = true;
     public ComponentManager ComponentManager { get; }
     public string Name { get; }
     public ulong Parent { get; }
@@ -31,11 +26,6 @@ public class PlaylistIO : IManagerComponent
         ComponentManager = componentManager;
         Name = name;
         Parent = parent;
-    }
-    
-    public ValueTask<bool> InitializeAsync(params string[] options)
-    {
-        return new ValueTask<bool>(true);
     }
     
     /* Playlist Format:

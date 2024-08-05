@@ -7,7 +7,6 @@ using Manager.Shared.Helpers;
 using Manager.Shared.Interfaces.Audio;
 using Manager.Shared.Interfaces.General;
 using Microsoft.Extensions.Logging;
-using Timer = System.Timers.Timer;
 
 namespace Manager.MediaBackends.BassPlayer;
 
@@ -34,8 +33,8 @@ public class BassChannel : IAudioChannel
     private readonly Dictionary<PositionTrigger, int> _positionTriggerHandles = new();
 
     private readonly int _bassChannel;
-    //private PeriodicTimer _positionTimer = new PeriodicTimer(TimeSpan.FromMilliseconds(10));
-    private readonly Timer _positionTimer = new Timer(TimeSpan.FromMilliseconds(1000.0 / 60.0));
+
+    private PeriodicTimer? _positionTimer;
 
     public BassChannel(IBackendService associatedBackend, MediaItem mediaItem,
         int bassChannel, ILogger<BassChannel>? logger = null)
@@ -47,28 +46,30 @@ public class BassChannel : IAudioChannel
         this.AssociatedBackend = associatedBackend;
         this.MediaItem = mediaItem;
         SetupEvents();
-        this.SetupPosition();
     }
 
-    private void SetupPosition()
+    private async ValueTask UpdatePositionPosition()
     {
-        this._positionTimer.Elapsed += (sender, args) =>
+        var thatTimer = _positionTimer;
+        while (thatTimer != null && (await thatTimer.WaitForNextTickAsync()))
         {
             var posAsSeconds = Bass.ChannelBytes2Seconds(_bassChannel, Bass.ChannelGetPosition(_bassChannel));
             this.Position = TimeSpan.FromSeconds(posAsSeconds);
             this.PositionChanged.InvokeAndForget(this, new ChannelPositionChangedEventArgs(this.Position ?? TimeSpan.Zero));
-        };
+        }
     }
 
     private void SetupEvents()
     {
         var syncHandle = Bass.ChannelSetSync(_bassChannel, SyncFlags.End, 0, (_, _, _, _) =>
         {
+            this._logger?.LogInformation("End sync for channel {channel} invoked", _bassChannel);
+            this._positionTimer?.Dispose();
+            this._positionTimer = null;
+            this.Position = this.Length;
+            this.PositionChanged?.InvokeAndForget(this, new ChannelPositionChangedEventArgs(this.Length ?? TimeSpan.Zero));
             this.Ended?.InvokeAndForget(this, EventArgs.Empty);
             this.StateChanged?.InvokeAndForget(this, new ChannelStateChangedEventArgs(ChannelState.Ended));
-            this._positionTimer.Stop();
-            this.PositionChanged?.InvokeAndForget(this, new ChannelPositionChangedEventArgs(this.Length ?? TimeSpan.Zero));
-            this._logger?.LogInformation("End sync for channel {channel} invoked", _bassChannel);
         }, IntPtr.Zero);
         if (syncHandle == 0)
             this._logger?.LogWarning("Failed to set end sync for channel {channel}: {BassLastError}", _bassChannel,
@@ -89,7 +90,8 @@ public class BassChannel : IAudioChannel
         
         this.Playing?.InvokeAndForget(this, EventArgs.Empty);
         this.StateChanged?.InvokeAndForget(this, new ChannelStateChangedEventArgs(ChannelState.Playing));
-        this._positionTimer.Start();
+        this._positionTimer = new PeriodicTimer(TimeSpan.FromMilliseconds(1000d / 60d));
+        _ = Task.Run(UpdatePositionPosition);
         this._logger?.LogInformation("Playing channel {channel}", _bassChannel);
         return ValueTask.FromResult(true);
     }
@@ -103,7 +105,8 @@ public class BassChannel : IAudioChannel
             return ValueTask.FromResult(false);
         }
         
-        this._positionTimer.Stop();
+        this._positionTimer?.Dispose();
+        this._positionTimer = null;
         this.Paused?.InvokeAndForget(this, EventArgs.Empty);
         this.StateChanged?.InvokeAndForget(this, new ChannelStateChangedEventArgs(ChannelState.Paused));
         this._logger?.LogInformation("Paused channel {channel}", _bassChannel);
@@ -119,7 +122,8 @@ public class BassChannel : IAudioChannel
             return ValueTask.FromResult(false);
         }
         
-        this._positionTimer.Start();
+        this._positionTimer = new PeriodicTimer(TimeSpan.FromMilliseconds(1000d / 60d));
+        _ = Task.Run(UpdatePositionPosition);
         this.Resumed?.InvokeAndForget(this, EventArgs.Empty);
         this.StateChanged?.InvokeAndForget(this, new ChannelStateChangedEventArgs(ChannelState.Playing));
         this._logger?.LogInformation("Resumed channel {channel}", _bassChannel);
@@ -142,7 +146,8 @@ public class BassChannel : IAudioChannel
             return ValueTask.FromResult(false);
         }
         
-        this._positionTimer.Stop();
+        this._positionTimer?.Dispose();
+        this._positionTimer = null;
         this.Stopped?.InvokeAndForget(this, EventArgs.Empty);
         this.StateChanged?.InvokeAndForget(this, new ChannelStateChangedEventArgs(ChannelState.Stopped));
         this._logger?.LogInformation("Stopped channel {channel}", _bassChannel);
@@ -371,8 +376,25 @@ public class BassChannel : IAudioChannel
         var success = Bass.ChannelSetDevice(this._bassChannel, id);
         if (!success)
         {
-            this._logger?.LogError("Failed to set device to {device}: {BassLastError}", device, Bass.LastError);
-            return ValueTask.FromResult(false);
+            if (!success && Bass.LastError == Errors.Init)
+            {
+                this._logger?.LogError("Failed to set device to {device}: Device not initialized", device);
+                //Init the device
+                var initSuccess = Bass.Init(id, Flags: DeviceInitFlags.Default);
+                if (initSuccess)
+                {
+                    this._logger?.LogInformation("Initialized device {device}", device);
+                    return SetDeviceAsync(device);
+                }
+
+                this._logger?.LogError("Failed to initialize device {device}: {BassLastError}", device, Bass.LastError);
+                return ValueTask.FromResult(false);
+            }
+            else
+            {
+                this._logger?.LogError("Failed to set device to {device}: {BassLastError}", device, Bass.LastError);
+                return ValueTask.FromResult(false);
+            }
         }
 
         this.ChannelDeviceChanged?.InvokeAndForget(this, new ChannelDeviceChangedEventArgs(device));
@@ -382,7 +404,7 @@ public class BassChannel : IAudioChannel
 
     public ValueTask DisposeAsync()
     {
-        this._positionTimer.Dispose();
+        this._positionTimer?.Dispose();
         Bass.StreamFree(_bassChannel);
         return ValueTask.CompletedTask;
     }

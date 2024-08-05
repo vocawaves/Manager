@@ -1,0 +1,97 @@
+UI Player API:
+Base Address: "http://localhost:8869/uiPlayer"
+Endpoints:
+
+- POST /PlayByIndex
+- JSON Body:
+-- {
+--     playlistIndex: Number,
+--     trackIndex: Number
+-- }
+Returns:
+-- 400/500 -> Bad JSON
+-- 404 -> Playlist or Track not found (see log)
+-- 200 -> true (bool)
+------
+
+- POST /PlayByIndexName
+- JSON Body:
+-- {
+--     playlistIndex: Number,
+--     trackName: FileName_Or_Path
+-- }
+Returns:
+-- 400/500 -> Bad JSON
+-- 404 -> Playlist or Track not found (see log)
+-- 200 -> true (bool)
+------
+
+- POST /PlayByName
+- JSON Body:
+-- {
+--     playlistName: Playlist_Name,
+--     trackName: FileName_Or_Path
+-- }
+Returns:
+-- 400/500 -> Bad JSON
+-- ??? -> Scratch Playlist missing (how idk)
+-- 200 -> true (bool)
+------
+
+- POST /PlayByNameIndex
+- JSON Body:
+-- {
+--     playlistName: Playlist_Name,
+--     trackIndex: Number
+-- }
+Returns:
+-- 400/500 -> Bad JSON
+-- 404 -> Playlist or Track not found (see log)
+-- 200 -> true (bool)
+------
+
+- POST /PlayPath
+- JSON Body:
+-- {
+--     path: File_Name_Or_Path
+-- }
+Returns:
+-- 400/500 -> Bad JSON
+-- 404 -> Playlist or Track not found (see log)
+-- 200 -> true (bool)
+------
+
+- POST /Pause
+Returns:
+-- 500 -> Something broke, see log
+-- 200 -> true (bool)
+------
+
+- POST /Resume
+Returns:
+-- 500 -> Something broke, see log
+-- 200 -> true (bool)
+------
+
+- POST /Stop
+Returns:
+-- 500 -> Something broke, see log
+-- 200 -> true (bool)
+------
+
+- POST /SetPosition
+- JSON Body:
+-- {
+--     position: Float_Number(seconds)
+-- }
+Returns:
+-- 400/500 -> Bad Json/See log
+-- 404 -> Nothing playing/loaded
+-- 200 -> true (bool)
+------
+
+- GET /GetPosition
+Returns:
+-- 404 -> Nothing playing/loaded
+-- 200 -> HH:MM:SS
+------

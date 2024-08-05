@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using Manager.DataBackends.Local;
+using Manager.DataBackends.YouTube;
 using Manager.MediaBackends.BassPlayer;
 using Manager.MediaBackends.LibVLCPlayer;
 using Manager.Shared;
@@ -32,7 +33,7 @@ public class MediaPlayer : IManagerComponent
     public ulong Parent { get; }
 
     #endregion
-    
+
     public event AsyncEventHandler? ActiveChannelChanged;
     public event AsyncEventHandler<MediaItem>? MediaAdded;
     public event AsyncEventHandler<MediaItem>? MediaRemoved;
@@ -42,10 +43,10 @@ public class MediaPlayer : IManagerComponent
     public event AsyncEventHandler? PlaybackStopped;
     public event AsyncEventHandler? PlaybackEnded;
     public event AsyncEventHandler<TimeSpan>? PlaybackPositionChanged;
-    
+
     public List<IBackendService> BackendServices { get; } = new();
     public List<IDataService> DataServices { get; } = new();
-    
+
     public List<MediaItem> StoredMedia { get; } = new();
 
     public IMediaChannel? ActiveMediaChannel
@@ -53,13 +54,13 @@ public class MediaPlayer : IManagerComponent
         get => _activeMediaChannel;
         private set
         {
-            _activeMediaChannel = value; 
+            _activeMediaChannel = value;
             ActiveChannelChanged?.InvokeAndForget(this, EventArgs.Empty);
         }
     }
-    
+
     public IExternalPlayerSurface? VideoSurface { get; set; }
-    
+
     public MediaPlayer(ComponentManager componentManager, string name, ulong parent)
     {
         _logger = componentManager.CreateLogger<MediaPlayer>();
@@ -72,53 +73,97 @@ public class MediaPlayer : IManagerComponent
     {
         if (Initialized)
             return true;
-        
+
         _logger?.LogInformation("Initializing MediaPlayer...");
-        
+
         var bassBackend = this.ComponentManager.CreateComponent<BassBackend>("BASS", 0);
         if (bassBackend == null)
         {
             _logger?.LogError("Failed to create BassBackend.");
             return false;
         }
+
         var vlcBackend = this.ComponentManager.CreateComponent<LibVLCBackend>("LibVLC", 0);
         if (vlcBackend == null)
         {
             _logger?.LogError("Failed to create LibVLCBackend.");
             return false;
         }
+
         BackendServices.Add(bassBackend);
         BackendServices.Add(vlcBackend);
-        
+
         var dummyCache = this.ComponentManager.CreateComponent<DummyCacheStrategy>("DummyCacheStrategy", 0);
         if (dummyCache == null)
         {
             _logger?.LogError("Failed to create DummyCacheStrategy.");
             return false;
         }
+
         var localDataConfig = new LocalDataServiceConfiguration()
         {
             CacheStrategy = dummyCache
         };
-        var localDataService = ComponentManager.CreateComponent<LocalDataService, LocalDataServiceConfiguration>("LocalData", 0, localDataConfig);
+        var localDataService =
+            ComponentManager.CreateComponent<LocalDataService, LocalDataServiceConfiguration>("LocalData", 0,
+                localDataConfig);
         if (localDataService == null)
         {
             _logger?.LogError("Failed to create LocalDataService.");
             return false;
         }
+
         DataServices.Add(localDataService);
         
+        var folderCacheConfig = new FolderCacheStrategyConfiguration()
+        {
+            CacheFolder = Path.Combine(Directory.GetCurrentDirectory(), "ManagerCache")
+        };
+        var folderCache =
+            this.ComponentManager.CreateComponent<FolderCacheStrategy, FolderCacheStrategyConfiguration>("FolderCache",
+                0, folderCacheConfig);
+        if (folderCache == null)
+        {
+            _logger?.LogError("Failed to create FolderCacheStrategy.");
+            return false;
+        }
+
+        var youtubeDataServiceConfig = new YouTubeDataServiceConfiguration()
+        {
+            CacheStrategy = folderCache
+        };
+        var youtubeDataService =
+            ComponentManager.CreateComponent<YouTubeDataService, YouTubeDataServiceConfiguration>("YouTubeData", 0,
+                youtubeDataServiceConfig);
+        if (youtubeDataService == null)
+        {
+            _logger?.LogError("Failed to create YouTubeDataService.");
+            return false;
+        }
+        
+        DataServices.Add(youtubeDataService);
+
         foreach (var backend in BackendServices)
         {
             _logger?.LogInformation($"Initializing backend: {backend.Name}");
-            await backend.InitializeAsync();
+            if (backend is not INeedsInitialization ini)
+                continue;
+            var couldInit = await ini.InitializeAsync();
+            if (couldInit)
+                continue;
+            _logger?.LogError($"Failed to initialize backend: {backend.Name}");
         }
+
         foreach (var dataService in DataServices)
         {
             _logger?.LogInformation($"Initializing data service: {dataService.Name}");
-            await dataService.InitializeAsync();
+            if (dataService is not INeedsInitialization ini)
+                continue;
+            var couldInit = await ini.InitializeAsync();
+            if (couldInit)
+                continue;
         }
-        
+
         _logger?.LogInformation("MediaPlayer initialized successfully.");
         Initialized = true;
         this.InitSuccess?.InvokeAndForget(this, EventArgs.Empty);
@@ -133,20 +178,14 @@ public class MediaPlayer : IManagerComponent
 
     public async ValueTask<MediaItem?> AddMediaAsync(string uri, ItemType type = ItemType.Guess)
     {
-        var dataService = DataServices.FirstOrDefault();
+        var dataService = DataServices.OfType<LocalDataService>().FirstOrDefault();
         if (dataService == null)
         {
             _logger?.LogError("No data service found.");
             return null;
         }
-        
-        var asLocalDataService = dataService as LocalDataService;
-        if (asLocalDataService == null)
-        {
-            _logger?.LogError("Data service is not a LocalDataService.");
-            return null;
-        }
-        
+
+        var asLocalDataService = dataService;
         var mediaItem = await asLocalDataService.GetMediaItemAsync(uri, type);
         if (mediaItem == null)
         {
@@ -160,18 +199,33 @@ public class MediaPlayer : IManagerComponent
         return mediaItem;
     }
     
+    public async ValueTask<bool> AddMediaItem(MediaItem mediaItem)
+    {
+        if (StoredMedia.Contains(mediaItem))
+        {
+            return false;
+        }
+        if (mediaItem.CacheState == CacheState.NotCached)
+        {
+            await mediaItem.CacheAsync();
+        }
+        StoredMedia.Add(mediaItem);
+        MediaAdded?.InvokeAndForget(this, mediaItem);
+        return true;
+    }
+
     public ValueTask<bool> RemoveMediaAsync(MediaItem mediaItem)
     {
         if (!StoredMedia.Contains(mediaItem))
         {
             return ValueTask.FromResult(false);
         }
-        
+
         StoredMedia.Remove(mediaItem);
         MediaRemoved?.InvokeAndForget(this, mediaItem);
         return ValueTask.FromResult(true);
     }
-    
+
     public async ValueTask<bool> PlayAsync(MediaItem mediaItem)
     {
         if (ActiveMediaChannel != null)
@@ -197,10 +251,10 @@ public class MediaPlayer : IManagerComponent
             _logger?.LogError("Failed to create media channel.");
             return false;
         }
-        
+
         ActiveMediaChannel = mediaChannel;
         SetUpEventHandlers(mediaChannel);
-        
+
         if (mediaItem.ItemType is ItemType.Video or ItemType.Image && ActiveMediaChannel is IVideoChannel videoChannel)
         {
             if (VideoSurface == null)
@@ -208,6 +262,7 @@ public class MediaPlayer : IManagerComponent
                 _logger?.LogError("No video surface found.");
                 return false;
             }
+
             var couldSetSurface = await videoChannel.SetExternalVideoSurfaceAsync(VideoSurface);
             if (!couldSetSurface)
             {
@@ -215,67 +270,93 @@ public class MediaPlayer : IManagerComponent
                 return false;
             }
         }
-        
+
         var could = await mediaChannel.PlayAsync();
         return could;
     }
-    
+
+    public async ValueTask<IAudioChannel?> CreateIndependentChannelAsync(MediaItem mediaItem)
+    {
+        //Only use the BassBackend for independent channels
+        var bassBackend = BackendServices.FirstOrDefault(x => x is BassBackend);
+        if (bassBackend == null)
+        {
+            _logger?.LogError("No Bass backend found.");
+            return null;
+        }
+
+        var mediaChannel = await bassBackend.CreateChannelAsync(mediaItem);
+        if (mediaChannel == null || !(mediaChannel is IAudioChannel audioChannel))
+        {
+            _logger?.LogError("Failed to create media channel.");
+            return null;
+        }
+
+        return audioChannel;
+    }
+
     public async ValueTask<bool> PauseAsync()
     {
         if (ActiveMediaChannel == null)
         {
             return false;
         }
+
         var could = await ActiveMediaChannel.PauseAsync();
         return could;
     }
-    
+
     public async ValueTask<bool> ResumeAsync()
     {
         if (ActiveMediaChannel == null)
         {
             return false;
         }
+
         var could = await ActiveMediaChannel.ResumeAsync();
         return could;
     }
-    
+
     public async ValueTask<bool> StopAsync()
     {
         if (ActiveMediaChannel == null)
         {
             return false;
         }
+
         var could = await ActiveMediaChannel.StopAsync();
         return could;
     }
-    
+
     public async ValueTask<bool> SetPositionAsync(TimeSpan position)
     {
         if (ActiveMediaChannel == null)
         {
             return false;
         }
+
         var could = await ActiveMediaChannel.SetPositionAsync(position);
         return could;
     }
-    
+
     public async ValueTask<bool> SetPositionAsync(double positionMs)
     {
         if (ActiveMediaChannel == null)
         {
             return false;
         }
+
         var could = await ActiveMediaChannel.SetPositionAsync(positionMs);
         return could;
     }
-    
+
     public async ValueTask<TimeSpan> GetPositionAsync()
     {
         if (ActiveMediaChannel == null)
         {
             return TimeSpan.Zero;
         }
+
         var position = await ActiveMediaChannel.GetPositionAsync();
         return position ?? TimeSpan.Zero;
     }
@@ -289,7 +370,7 @@ public class MediaPlayer : IManagerComponent
         mediaChannel.Ended += OnMediaChannelOnEnded;
         mediaChannel.PositionChanged += OnMediaChannelOnPositionChanged;
     }
-    
+
     private void TearDownEventHandlers(IMediaChannel mediaChannel)
     {
         mediaChannel.Playing -= OnMediaChannelOnPlaying;

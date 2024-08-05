@@ -9,12 +9,13 @@ using Manager.Shared.Interfaces.General;
 using Microsoft.Extensions.Logging;
 using YoutubeExplode;
 using YoutubeExplode.Videos;
+using YoutubeExplode.Videos.Streams;
 
 namespace Manager.DataBackends.YouTube;
 
-public class YouTubeDataService : IManagerComponent<YouTubeDataServiceConfiguration>, IStreamingServiceSource, IAudioDataSource, IVideoDataSource
+public class YouTubeDataService : IManagerComponent<YouTubeDataServiceConfiguration>, IStreamingServiceSource,
+    IAudioDataSource, IVideoDataSource
 {
-
     private readonly ILogger<YouTubeDataService>? _logger;
     private readonly ICacheStrategy _cacheStrategy;
     private readonly YoutubeClient _youtubeClient;
@@ -22,14 +23,11 @@ public class YouTubeDataService : IManagerComponent<YouTubeDataServiceConfigurat
 
     #region IManagerComponent
 
-    public event AsyncEventHandler? InitSuccess;
-    public event AsyncEventHandler<InitFailedEventArgs>? InitFailed;
-    public bool Initialized { get; } = true;
     public ComponentManager ComponentManager { get; }
     public string Name { get; }
     public ulong Parent { get; }
 
-    public YouTubeDataServiceConfiguration? Configuration { get; }
+    public YouTubeDataServiceConfiguration Configuration { get; }
 
     #endregion
 
@@ -51,14 +49,16 @@ public class YouTubeDataService : IManagerComponent<YouTubeDataServiceConfigurat
             _logger?.LogError("Failed to create cache strategy");
             throw new InvalidOperationException("Failed to create cache strategy");
         }
+
         Configuration = new YouTubeDataServiceConfiguration
         {
             CacheStrategy = cacheStrategy
         };
         _cacheStrategy = cacheStrategy;
     }
-    
-    public YouTubeDataService(ComponentManager componentManager, string name, ulong parent, YouTubeDataServiceConfiguration configuration)
+
+    public YouTubeDataService(ComponentManager componentManager, string name, ulong parent,
+        YouTubeDataServiceConfiguration configuration)
     {
         _youtubeClient = new YoutubeClient();
         _httpClient = new HttpClient();
@@ -88,12 +88,7 @@ public class YouTubeDataService : IManagerComponent<YouTubeDataServiceConfigurat
             _cacheStrategy = cacheStrategy;
         }
     }
-    
-    public ValueTask<bool> InitializeAsync(params string[] options)
-    {
-        return ValueTask.FromResult(true);
-    }
-    
+
     public async ValueTask<MediaItem?> GetAudioItemAsync(string uri)
     {
         var videoId = VideoId.TryParse(uri);
@@ -103,7 +98,18 @@ public class YouTubeDataService : IManagerComponent<YouTubeDataServiceConfigurat
             return null;
         }
 
-        throw new NotImplementedException();
+        try
+        {
+            var video = await _youtubeClient.Videos.GetAsync(videoId.Value);
+            var logger = ComponentManager.CreateLogger<MediaItem>();
+            var mediaItem = new MediaItem(this, ItemType.Audio, this.Parent, uri, video.Id, logger);
+            return mediaItem;
+        }
+        catch (Exception e)
+        {
+            _logger?.LogError(e, "Failed to get video manifest for video id {VideoId}", videoId);
+            return null;
+        }
     }
 
     public async ValueTask<MediaItem?> GetVideoItemAsync(string uri)
@@ -114,8 +120,19 @@ public class YouTubeDataService : IManagerComponent<YouTubeDataServiceConfigurat
             _logger?.LogError("Failed to parse video id from uri {Uri}", uri);
             return null;
         }
-        
-        throw new NotImplementedException();
+
+        try
+        {
+            var video = await _youtubeClient.Videos.GetAsync(videoId.Value);
+            var logger = ComponentManager.CreateLogger<MediaItem>();
+            var mediaItem = new MediaItem(this, ItemType.Video, this.Parent, uri, video.Id, logger);
+            return mediaItem;
+        }
+        catch (Exception e)
+        {
+            _logger?.LogError(e, "Failed to get video manifest for video id {VideoId}", videoId);
+            return null;
+        }
     }
 
     public ValueTask<MediaItem?> GetSubtitleItemAsync(string uri)
@@ -173,8 +190,52 @@ public class YouTubeDataService : IManagerComponent<YouTubeDataServiceConfigurat
         return this._cacheStrategy.RemoveAsync(item);
     }
 
-    public ValueTask<bool> CacheMediaItemAsync(MediaItem item)
+    public async ValueTask<bool> CacheMediaItemAsync(MediaItem item)
     {
-        throw new NotImplementedException();
+        if (item.CacheState is CacheState.Cached or CacheState.Downloading or CacheState.DiskCaching)
+        {
+            _logger?.LogDebug("Media item {PathTitle} is already cached or being cached", item.PathTitle);
+            return item.CacheState is CacheState.Cached;
+        }
+
+        var videoId = VideoId.TryParse(item.SourcePath);
+        if (videoId is null)
+        {
+            _logger?.LogError("Failed to parse video id from uri {Uri}", item.SourcePath);
+            return true;
+        }
+
+        var streamManifest = await _youtubeClient.Videos.Streams.GetManifestAsync(videoId.Value);
+        var streamInfo = item.ItemType switch
+        {
+            ItemType.Audio => streamManifest.GetAudioOnlyStreams().GetWithHighestBitrate(),
+            ItemType.Video => streamManifest.GetVideoStreams().GetWithHighestVideoQuality(),
+            _ => null
+        };
+
+        if (streamInfo is null)
+        {
+            _logger?.LogError("Failed to get stream info for video id {VideoId}", videoId);
+            return false;
+        }
+
+        var outputStream = new MemoryStream();
+        await _youtubeClient.Videos.Streams.CopyToAsync(streamInfo, outputStream,
+            new Progress<double>((d) => CacheProgressUpdated(d, item)));
+        
+        var cacheNameTypePrefix = item.ItemType switch
+        {
+            ItemType.Audio => "MA_",
+            ItemType.Video => "MV_",
+            _ => "XX_"
+        };
+        var cacheName = $"{cacheNameTypePrefix}{videoId}.mcb"; //manager cache buffer
+        var couldCache = await this._cacheStrategy.CacheAsync(item, outputStream, cacheName);
+        return couldCache;
+    }
+
+    private void CacheProgressUpdated(double progress, MediaItem mediaItem)
+    {
+        mediaItem.SetCacheProgress((int)progress);
     }
 }

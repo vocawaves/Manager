@@ -12,7 +12,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Manager.MediaBackends.BassPlayer;
 
-public class BassBackend : IAudioBackendService
+public class BassBackend : IAudioBackendService, INeedsInitialization
 {
     #region IManagerComponent
 

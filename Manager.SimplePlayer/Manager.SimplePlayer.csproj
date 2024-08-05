@@ -11,6 +11,7 @@
       <ProjectReference Include="$(SolutionDir)\Manager.Shared\Manager.Shared.csproj" />
       <ProjectReference Include="$(SolutionDir)\MediaBackends\BassPlayer\BassPlayer.csproj" />
       <ProjectReference Include="$(SolutionDir)\MediaBackends\LibVLCPlayer\LibVLCPlayer.csproj" />
+      <ProjectReference Include="..\DataBackends\YouTube\YouTube.csproj" />
     </ItemGroup>
 
 </Project>

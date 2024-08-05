@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Manager.Shared.Cache;
 
-public class FolderCacheStrategy : IManagerComponent<FolderCacheStrategyConfiguration>, ICacheStrategy
+public class FolderCacheStrategy : IManagerComponent<FolderCacheStrategyConfiguration>, ICacheStrategy, INeedsInitialization
 {
     #region IManagerComponent
 

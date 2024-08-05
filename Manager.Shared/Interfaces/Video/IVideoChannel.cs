@@ -1,12 +1,13 @@
 ﻿using Manager.Shared.Events.Video;
 using Manager.Shared.Helpers;
+using Manager.Shared.Interfaces.General;
 
 namespace Manager.Shared.Interfaces.Video;
 
 /// <summary>
 /// A channel that can handle video.
 /// </summary>
-public interface IVideoChannel
+public interface IVideoChannel : IMediaChannel
 {
     #region Events
 

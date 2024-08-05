@@ -13,6 +13,7 @@ using Manager.Shared.Enums;
 using Manager.Shared.Interfaces.Video;
 using Manager.SimplePlayer;
 using Microsoft.Extensions.Logging;
+using SimplePlayer.API;
 using SimplePlayer.Models;
 using SimplePlayer.Utilities;
 using SimplePlayer.Views;
@@ -31,18 +32,40 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty] private PlaylistItemModel? _selectedPlaylistItem;
     [ObservableProperty] private bool _canAddToPlaylist;
 
-    [ObservableProperty] private TimeSpan _jumpToTime = TimeSpan.Zero;
+    [ObservableProperty] private string? _jumpToTime = TimeSpan.Zero.ToString();
 
     [ObservableProperty] private TimeSpan _remainingTime = TimeSpan.Zero;
+    [ObservableProperty] private TimeSpan _duration = TimeSpan.Zero;
 
     public IExternalPlayerSurface? VideoControl => Player.VideoSurface;
     private VideoPlayerWindow? _videoPlayerWindow;
     [ObservableProperty] private bool _canOpenVideoPlayer = true;
-    [ObservableProperty] private bool _videoPlayerVisible = false;
+    [ObservableProperty] private bool _videoPlayerVisible;
     [ObservableProperty] private Bitmap? _videoPlayerWindowBackground;
 
-    [ObservableProperty] private bool _controlsOnTop = false;
-    [ObservableProperty] private bool _videoOnTop = false;
+    public string CurrentMedia => Player.ActiveMediaChannel?.MediaItem.PathTitle ?? "No Media";
+
+    [ObservableProperty] private bool _controlsOnTop;
+    [ObservableProperty] private bool _videoOnTop;
+
+    [ObservableProperty] private bool _apiEnabled;
+    [ObservableProperty] private int _apiPort = 8869;
+    private MediaPlayerApi? _api;
+
+    [ObservableProperty] [NotifyPropertyChangedFor(nameof(RepeatModeString))]
+    private int _repeatMode;
+
+    private SoundBoardsViewModel _soundBoardsVm;
+
+    public string RepeatModeString => RepeatMode switch
+    {
+        0 => "None",
+        1 => "Repeat One",
+        2 => "Repeat All",
+        _ => "Unknown"
+    };
+
+    public PlaylistItemModel? CurrentItem { get; set; }
 
     public MainViewModel(ComponentManager componentManager, MediaPlayer player)
     {
@@ -50,7 +73,8 @@ public partial class MainViewModel : ViewModelBase
         _playlistIO = componentManager.CreateComponent<PlaylistIO>("PlaylistIO", 0);
         Player = player;
         Player.PlaybackPositionChanged += PlayerOnPlaybackPositionChanged;
-        Player.PlaybackEnded += async (sender, args) =>
+        Player.PlaybackEnded += OnPlayerOnPlaybackEnded;
+        Player.PlaybackStopped += async (_, _) =>
         {
             await Dispatcher.UIThread.InvokeAsync(() =>
             {
@@ -58,13 +82,9 @@ public partial class MainViewModel : ViewModelBase
                 VideoPlayerVisible = false;
             });
         };
-        Player.PlaybackStopped += async (sender, args) =>
+        Player.ActiveChannelChanged += async (_, _) =>
         {
-            await Dispatcher.UIThread.InvokeAsync(() =>
-            {
-                RemainingTime = TimeSpan.Zero;
-                VideoPlayerVisible = false;
-            });
+            await Dispatcher.UIThread.InvokeAsync(() => OnPropertyChanged(nameof(CurrentMedia)));
         };
         _logger = componentManager.CreateLogger<MainViewModel>();
         var scratchList = new PlaylistModel("Scratch List", false)
@@ -73,9 +93,31 @@ public partial class MainViewModel : ViewModelBase
         };
         Playlists.Add(scratchList);
         SelectedPlaylist = scratchList;
+        _soundBoardsVm = new SoundBoardsViewModel(this, componentManager);
     }
 
-    private async ValueTask PlayerOnPlaybackPositionChanged(object sender, TimeSpan eventargs)
+    private async ValueTask OnPlayerOnPlaybackEnded(object o, EventArgs eventArgs)
+    {
+        await Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            RemainingTime = TimeSpan.Zero;
+            VideoPlayerVisible = false;
+        });
+        if (RepeatMode == 1)
+            await Dispatcher.UIThread.InvokeAsync(async () => await Play());
+        else if (RepeatMode == 2)
+        {
+            if (CurrentItem == null) return;
+            var index = CurrentItem.Parent.PlaylistItems.IndexOf(CurrentItem);
+            if (index == CurrentItem.Parent.PlaylistItems.Count - 1) index = -1;
+            var lastSelected = SelectedPlaylistItem;
+            await Dispatcher.UIThread.InvokeAsync(() => SelectedPlaylistItem = SelectedPlaylist.PlaylistItems[index + 1]);
+            await Dispatcher.UIThread.InvokeAsync(async () => await Play());
+            await Dispatcher.UIThread.InvokeAsync(() => SelectedPlaylistItem = lastSelected);
+        }
+    }
+
+    private async ValueTask PlayerOnPlaybackPositionChanged(object sender, TimeSpan eventArgs)
     {
         if (Player.ActiveMediaChannel == null)
             return;
@@ -91,10 +133,41 @@ public partial class MainViewModel : ViewModelBase
         _videoPlayerWindow.Topmost = value;
     }
 
+    partial void OnApiEnabledChanged(bool value)
+    {
+        _ = value
+            ? Task.Run(async () =>
+            {
+                _api = new MediaPlayerApi(this._componentManager, this);
+                await _api.StartApi();
+                await _soundBoardsVm.EnableApi();
+            })
+            : Task.Run(async () =>
+            {
+                if (_api != null)
+                {
+                    await _api.StopApi();
+                    _api = null;
+                }
+                await _soundBoardsVm.DisableApi();
+            });
+    }
+
     #region Playlist Management
 
     public async Task AddPlaylist(Window parent)
     {
+        var playlistDialog = new AddPlaylistView();
+        var dialogResult = await playlistDialog.ShowDialog<PlaylistModel?>(parent);
+        if (dialogResult == null)
+        {
+            _logger?.LogInformation("User cancelled add playlist dialog.");
+            return;
+        }
+
+        dialogResult.ParentCollection = Playlists;
+        Playlists.Add(dialogResult);
+        SelectedPlaylist = dialogResult;
     }
 
     public async Task AddToPlaylist(Window parent)
@@ -125,25 +198,26 @@ public partial class MainViewModel : ViewModelBase
         CanAddToPlaylist = true;
     }
 
-    public async Task AddFileToPlaylist(PlaylistModel playlist, string uri)
+    public async Task<PlaylistItemModel?> AddFileToPlaylist(PlaylistModel playlist, string uri)
     {
         var existingItem = Player.StoredMedia.FirstOrDefault(x => x.SourcePath == uri);
         if (existingItem != null)
         {
             var item = new PlaylistItemModel(playlist, existingItem);
             await Dispatcher.UIThread.InvokeAsync(() => playlist.PlaylistItems.Add(item));
-            return;
+            return item;
         }
 
         var mediaItem = await Player.AddMediaAsync(uri);
         if (mediaItem == null)
         {
             _logger?.LogError("Failed to add media item.");
-            return;
+            return null;
         }
 
         var playlistItem = new PlaylistItemModel(playlist, mediaItem);
         await Dispatcher.UIThread.InvokeAsync(() => playlist.PlaylistItems.Add(playlistItem));
+        return playlistItem;
     }
 
     public async Task LoadPlaylist(Window parent)
@@ -209,18 +283,18 @@ public partial class MainViewModel : ViewModelBase
             _logger?.LogError("Failed to get local path.");
             return;
         }
-        
+
         var playlists = await _playlistIO.LoadPlaylistCollection(path);
         if (playlists == null)
         {
             _logger?.LogError("Failed to load playlists.");
             return;
         }
-        
+
         foreach (var playlist in playlists)
         {
             playlist.ParentCollection = Playlists;
-            Dispatcher.UIThread.InvokeAsync(() => Playlists.Add(playlist));
+            await Dispatcher.UIThread.InvokeAsync(() => Playlists.Add(playlist));
         }
     }
 
@@ -246,7 +320,7 @@ public partial class MainViewModel : ViewModelBase
             _logger?.LogError("Failed to get local path.");
             return;
         }
-        
+
         if (!await _playlistIO!.SavePlaylist(selectedPlaylist, path))
         {
             _logger?.LogError("Failed to save playlist.");
@@ -287,12 +361,12 @@ public partial class MainViewModel : ViewModelBase
             _logger?.LogError("Failed to save playlists.");
         }
     }
-    
+
     public void ClearPlaylist()
     {
         SelectedPlaylist.PlaylistItems.Clear();
     }
-    
+
     public async Task SaveScratch(Window parent)
     {
         var scratchList = Playlists.FirstOrDefault(x => !x.IsRemovable);
@@ -301,8 +375,17 @@ public partial class MainViewModel : ViewModelBase
             _logger?.LogError("No scratch list found.");
             return;
         }
-        
-        //Needs Add Playlist Dialog
+
+        var playlistDialog = new AddPlaylistView(scratchList);
+        var dialogResult = await playlistDialog.ShowDialog<PlaylistModel?>(parent);
+        if (dialogResult == null)
+        {
+            _logger?.LogInformation("User cancelled save dialog.");
+            return;
+        }
+
+        Playlists.Add(dialogResult);
+        SelectedPlaylist = dialogResult;
     }
 
     #endregion
@@ -315,7 +398,9 @@ public partial class MainViewModel : ViewModelBase
             return;
 
         VideoPlayerVisible = SelectedPlaylistItem.Item.ItemType is ItemType.Video or ItemType.Image;
+        CurrentItem = SelectedPlaylistItem;
         await Player.PlayAsync(SelectedPlaylistItem.Item);
+        await Dispatcher.UIThread.InvokeAsync(() => Duration = Player.ActiveMediaChannel?.Length ?? TimeSpan.Zero);
     }
 
     public async Task PauseResume()
@@ -338,7 +423,7 @@ public partial class MainViewModel : ViewModelBase
         await Player.StopAsync();
     }
 
-    public async Task OpenVideoPlayer()
+    public void OpenVideoPlayer()
     {
         if (_videoPlayerWindow != null)
         {
@@ -352,15 +437,14 @@ public partial class MainViewModel : ViewModelBase
             _logger?.LogError("Failed to create VLCVideoControl.");
             return;
         }
-
-        await vlcControl.InitializeAsync();
+        
         Player.VideoSurface = vlcControl;
         _videoPlayerWindow = new VideoPlayerWindow()
         {
             DataContext = this,
             Topmost = VideoOnTop
         };
-        _videoPlayerWindow.Closed += (sender, args) =>
+        _videoPlayerWindow.Closed += (_, _) =>
         {
             _videoPlayerWindow = null;
             Player.VideoSurface = null;
@@ -398,13 +482,43 @@ public partial class MainViewModel : ViewModelBase
         VideoPlayerWindowBackground = new Bitmap(path);
     }
 
+    public void ClearVideoBackground()
+    {
+        VideoPlayerWindowBackground = null;
+    }
+
     public async Task DoJumpToTime()
     {
-        if (Player.ActiveMediaChannel == null)
+        if (Player.ActiveMediaChannel == null || JumpToTime == null)
             return;
 
-        await Player.ActiveMediaChannel.SetPositionAsync(JumpToTime);
+        TimeSpan toSet;
+        if (JumpToTime.Contains(':'))
+            toSet = TimeSpan.Parse(JumpToTime);
+        else if (JumpToTime.EndsWith('s'))
+            toSet = TimeSpan.FromSeconds(double.Parse(JumpToTime.TrimEnd('s')));
+        else if (JumpToTime.EndsWith('m'))
+            toSet = TimeSpan.FromMinutes(double.Parse(JumpToTime.TrimEnd('m')));
+        else if (JumpToTime.EndsWith('h'))
+            toSet = TimeSpan.FromHours(double.Parse(JumpToTime.TrimEnd('h')));
+        else
+        {
+            var tryParse = TimeSpan.TryParse(JumpToTime, out toSet);
+            if (!tryParse)
+                return;
+        }
+
+        await Player.ActiveMediaChannel.SetPositionAsync(toSet);
     }
 
     #endregion
+
+    public void OpenSoundBoard()
+    {
+        var sb = new SoundBoardsView()
+        {
+            DataContext = _soundBoardsVm 
+        };
+        sb.Show();
+    }
 }

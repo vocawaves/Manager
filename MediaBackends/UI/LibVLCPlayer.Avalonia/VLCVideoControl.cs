@@ -4,8 +4,6 @@ using Avalonia.Platform;
 using LibVLCSharp.Shared;
 using Manager.MediaBackends.LibVLCPlayer;
 using Manager.Shared;
-using Manager.Shared.Events.General;
-using Manager.Shared.Helpers;
 using Manager.Shared.Interfaces.General;
 using Microsoft.Extensions.Logging;
 
@@ -15,15 +13,10 @@ public class VLCVideoControl : NativeControlHost, IManagerComponent, IVLCVideoCo
 {
     #region IManagerComponent
 
-    public event AsyncEventHandler? InitSuccess;
-    public event AsyncEventHandler<InitFailedEventArgs>? InitFailed;
     public ComponentManager ComponentManager { get; }
     
     string IManagerComponent.Name => ManComName;
     public string ManComName { get; private set; }
-
-    bool IManagerComponent.Initialized => ManComInitialized;
-    public bool ManComInitialized { get; } = true;
     
     ulong IManagerComponent.Parent => ManComParent;
     public ulong ManComParent { get; private set; }
@@ -61,11 +54,6 @@ public class VLCVideoControl : NativeControlHost, IManagerComponent, IVLCVideoCo
         this.ManComName = name;
         this.ManComParent = parent;
         this._logger = componentManager.CreateLogger<VLCVideoControl>();
-    }
-
-    public ValueTask<bool> InitializeAsync(params string[] options)
-    {
-        return ValueTask.FromResult(true);
     }
     
     public ValueTask<bool> SetPlayerToControlAsync(object playerObj)

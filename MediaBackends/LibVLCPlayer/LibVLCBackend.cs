@@ -13,7 +13,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Manager.MediaBackends.LibVLCPlayer;
 
-public class LibVLCBackend : IVideoBackendService, IAudioBackendService
+public class LibVLCBackend : IVideoBackendService, IAudioBackendService, INeedsInitialization
 {
     #region IManagerComponent
     
@@ -36,7 +36,7 @@ public class LibVLCBackend : IVideoBackendService, IAudioBackendService
     
     private AudioDevice? _currentDefaultDevice;
     private float _currentDefaultVolume = 1.0f;
-
+    
     public LibVLCBackend(ComponentManager componentManager, string name, ulong parent)
     {
         this.ComponentManager = componentManager;
@@ -94,7 +94,7 @@ public class LibVLCBackend : IVideoBackendService, IAudioBackendService
         }
         
         var media = new Media(_internalLibVLC, path);
-        media.AddOption("image-duration=30");
+        media.AddOption("image-duration=99999");
         var channelPlayer = new MediaPlayer(media);
         if (channelPlayer.Media == null)
         {

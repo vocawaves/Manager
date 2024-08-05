@@ -3,8 +3,6 @@ using Manager.Shared;
 using Manager.Shared.Cache;
 using Manager.Shared.Entities;
 using Manager.Shared.Enums;
-using Manager.Shared.Events.General;
-using Manager.Shared.Helpers;
 using Manager.Shared.Interfaces.Data;
 using Manager.Shared.Interfaces.General;
 using Microsoft.Extensions.Logging;
@@ -16,16 +14,13 @@ public class LocalDataService : IManagerComponent<LocalDataServiceConfiguration>
 {
 
     #region IManagerComponent
-    
-    public event AsyncEventHandler? InitSuccess;
-    public event AsyncEventHandler<InitFailedEventArgs>? InitFailed;
-    
-    public bool Initialized { get; } = true;
     public ComponentManager ComponentManager { get; }
     public string Name { get; }
     public ulong Parent { get; }
     
     #endregion
+
+    public LocalDataServiceConfiguration Configuration { get; }
     
     private readonly ILogger<LocalDataService>? _logger;
     private readonly ICacheStrategy _cacheStrategy;
@@ -51,6 +46,10 @@ public class LocalDataService : IManagerComponent<LocalDataServiceConfiguration>
             CacheStrategy = strategy
         };
         _cacheStrategy = strategy;
+        MimeTypesMap.AddOrUpdate("audio/mpeg", ".mp3");
+        MimeTypesMap.AddOrUpdate("audio/ogg", ".ogg");
+        MimeTypesMap.AddOrUpdate("audio/opus", ".opus");
+        MimeTypesMap.AddOrUpdate("audio/mpeg", ".m4a");
     }
     
     public LocalDataService(ComponentManager componentManager, string name, ulong parent, LocalDataServiceConfiguration configuration)
@@ -61,11 +60,6 @@ public class LocalDataService : IManagerComponent<LocalDataServiceConfiguration>
         Parent = parent;
         Configuration = configuration;
         _cacheStrategy = configuration.CacheStrategy;
-    }
-
-    public ValueTask<bool> InitializeAsync(params string[] options)
-    {
-        return ValueTask.FromResult(true);
     }
 
     public ValueTask<DirectoryItem[]> GetMountPointsAsync()
@@ -128,13 +122,14 @@ public class LocalDataService : IManagerComponent<LocalDataServiceConfiguration>
         if (type == ItemType.Guess)
         {
             var typeGuess = await GetMimeType(uri);
-            if (typeGuess.StartsWith("video/"))
+            var byExtension = MimeTypesMap.GetMimeType(Path.GetExtension(uri));
+            if (typeGuess.StartsWith("video/") || byExtension.StartsWith("video/"))
                 type = ItemType.Video;
-            else if (typeGuess.StartsWith("audio/"))
+            else if (typeGuess.StartsWith("audio/") || byExtension.StartsWith("audio/"))
                 type = ItemType.Audio;
-            else if (typeGuess.StartsWith("image/"))
+            else if (typeGuess.StartsWith("image/") || byExtension.StartsWith("image/"))
                 type = ItemType.Image;
-            else if (typeGuess.StartsWith("text/"))
+            else if (typeGuess.StartsWith("text/") || byExtension.StartsWith("text/"))
                 type = ItemType.Subtitle;
             else
                 type = ItemType.Misc;
@@ -210,6 +205,4 @@ public class LocalDataService : IManagerComponent<LocalDataServiceConfiguration>
     {
         return _cacheStrategy.GetCachedStreamAsync(item);
     }
-
-    public LocalDataServiceConfiguration? Configuration { get; }
 }

@@ -1,6 +1,6 @@
 ﻿namespace Manager.Shared.Interfaces.General;
 
-public interface IManagerComponent<TConf> : IManagerComponent
+public interface IManagerComponent<out TConf> : IManagerComponent
     where TConf : class, IComponentConfiguration
 {
     /// <summary>

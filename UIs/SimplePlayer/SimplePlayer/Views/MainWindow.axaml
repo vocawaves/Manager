@@ -6,7 +6,7 @@
         xmlns:views="clr-namespace:SimplePlayer.Views"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="SimplePlayer.Views.MainWindow"
-        Icon="/Assets/avalonia-logo.ico"
+        Icon="/Assets/032forIc.ico"
         Title="SimplePlayer"
         x:DataType="vm:MainViewModel"
         Topmost="{Binding ControlsOnTop}">

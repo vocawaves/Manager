@@ -1,4 +1,5 @@
-﻿using Avalonia;
+﻿using System.IO;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Data.Core.Plugins;
@@ -6,6 +7,7 @@ using Avalonia.Markup.Xaml;
 using Manager.Shared;
 using Manager.SimplePlayer;
 using Microsoft.Extensions.Logging;
+using Serilog;
 using SimplePlayer.ViewModels;
 using SimplePlayer.Views;
 
@@ -24,11 +26,14 @@ public partial class App : Application
         // Without this line you will get duplicate validations from both Avalonia and CT
         BindingPlugins.DataValidators.RemoveAt(0);
 
-        var loggerFactory = LoggerFactory.Create(builder =>
-        {
-            builder.AddConsole();
-            builder.SetMinimumLevel(LogLevel.Debug);
-        });
+        var logConf = new LoggerConfiguration().MinimumLevel.Debug()
+#if DEBUG
+            .WriteTo.Console()
+#endif
+            .WriteTo.File(Path.Combine(Directory.GetCurrentDirectory(), "SimplePlayer.log"),
+                rollingInterval: RollingInterval.Day)
+            .CreateLogger();
+        var loggerFactory = LoggerFactory.Create(builder => builder.AddSerilog(logConf));
         var logger = loggerFactory.CreateLogger<App>();
         var componentManager = new ComponentManager(loggerFactory);
         var mediaPlayer = componentManager.CreateComponent<MediaPlayer>("MediaPlayer", 0);
@@ -44,7 +49,7 @@ public partial class App : Application
             logger.LogError("Failed to initialize media player.");
             return;
         }
-        
+
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             desktop.ShutdownMode = ShutdownMode.OnMainWindowClose;

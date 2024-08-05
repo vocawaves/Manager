@@ -10,10 +10,6 @@ namespace Manager.Shared.Cache;
 public class InMemoryCacheStrategy : ICacheStrategy
 {
     #region IManagerComponent
-
-    public event AsyncEventHandler? InitSuccess;
-    public event AsyncEventHandler<InitFailedEventArgs>? InitFailed;
-    public bool Initialized { get; } = true;
     public ComponentManager ComponentManager { get; }
     public string Name { get; }
     public ulong Parent { get; }
@@ -30,11 +26,6 @@ public class InMemoryCacheStrategy : ICacheStrategy
         Name = name;
         Parent = parent;
         _logger = componentManager.CreateLogger<InMemoryCacheStrategy>();
-    }
-    
-    public ValueTask<bool> InitializeAsync(params string[] options)
-    {
-        return ValueTask.FromResult(true);
     }
 
     public ValueTask<bool> CheckForExistingCacheAsync(MediaItem mediaItem, string cacheName)

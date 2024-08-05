@@ -1,0 +1,238 @@
+﻿<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:models="clr-namespace:SimplePlayer.Models"
+        xmlns:controls="clr-namespace:SimplePlayer.Controls"
+        xmlns:viewModels="clr-namespace:SimplePlayer.ViewModels"
+        xmlns:i="clr-namespace:Avalonia.Xaml.Interactivity;assembly=Avalonia.Xaml.Interactivity"
+        xmlns:id="clr-namespace:Avalonia.Xaml.Interactions.Draggable;assembly=Avalonia.Xaml.Interactions.Draggable"
+        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        x:Class="SimplePlayer.Views.SoundBoardsView"
+        Title="SoundBoardsView"
+        x:DataType="viewModels:SoundBoardsViewModel">
+    <Window.DataTemplates>
+        <DataTemplate DataType="models:SoundModel">
+            <controls:SoundButtonControl x:DataType="models:SoundModel"
+                                         Margin="5"
+                                         DragDrop.AllowDrop="True"
+                                         DataContext="{Binding }">
+                <controls:SoundButtonControl.Content>
+                    <Button HorizontalAlignment="Stretch"
+                            VerticalAlignment="Stretch"
+                            HorizontalContentAlignment="Stretch"
+                            VerticalContentAlignment="Stretch"
+                            Background="{Binding BackgroundColor}"
+                            CornerRadius="10"
+                            Command="{Binding Trigger}">
+                        <Button.ContextFlyout>
+                            <Flyout>
+                                <StackPanel Orientation="Vertical">
+                                    <MenuItem Header="Load Sound"
+                                              Command="{Binding LoadSound}"
+                                              CommandParameter="{Binding $parent[Window]}" />
+                                    <Separator Height="2"
+                                               Width="50"
+                                               Margin="2" />
+                                    <CheckBox Content="Loop?"
+                                              IsChecked="{Binding Loop}" />
+                                    <CheckBox Content="Fade?"
+                                              IsChecked="{Binding Fade}" />
+                                    <TextBlock Text="Fade Duration:" />
+                                    <NumericUpDown Value="{Binding FadeDuration}"
+                                                   Minimum="0" />
+                                    <Separator Height="2"
+                                               Width="50"
+                                               Margin="2" />
+                                    <TextBlock Text="Volume (0-200):" />
+                                    <NumericUpDown Value="{Binding Volume}"
+                                                   Minimum="0"
+                                                   Maximum="200" />
+                                    <TextBlock Text="Device:" />
+                                    <ComboBox HorizontalAlignment="Stretch"
+                                              ItemsSource="{Binding Devices}"
+                                              SelectedItem="{Binding SelectedDevice}" />
+                                    <Separator Height="2"
+                                               Width="50"
+                                               Margin="2" />
+                                    <MenuItem Header="Remove"
+                                              Command="{Binding SetChannel}" />
+                                </StackPanel>
+                            </Flyout>
+                        </Button.ContextFlyout>
+                        <Button.Content>
+                            <Grid HorizontalAlignment="Stretch"
+                                  VerticalAlignment="Stretch">
+                                <TextBlock HorizontalAlignment="Left"
+                                           VerticalAlignment="Top"
+                                           FontSize="10"
+                                           Text="{Binding IndexHelper}" />
+
+                                <TextBlock HorizontalAlignment="Right"
+                                           VerticalAlignment="Top"
+                                           FontSize="10"
+                                           Text="{Binding Duration, StringFormat={}{0:mm\\:ss}}" />
+
+                                <StackPanel HorizontalAlignment="Center"
+                                            VerticalAlignment="Center"
+                                            Orientation="Vertical">
+
+                                    <TextBlock TextAlignment="Center"
+                                               Text="{Binding Name}"
+                                               TextWrapping="Wrap" />
+                                    <Grid ColumnDefinitions="*, Auto"
+                                          IsVisible="{Binding IsPlaying}">
+                                        <ProgressBar Grid.Column="0" 
+                                                     Height="10"
+                                                     Margin="0,0,5,0"
+                                                     Maximum="{Binding TimeTotal}"
+                                                     Value="{Binding TimeRemaining}"/>
+                                        <TextBlock Grid.Column="1"
+                                                   HorizontalAlignment="Left"
+                                                   Text="{Binding TimeRemainingSpan, StringFormat={}{0:mm\\:ss}}"/>
+                                    </Grid>
+                                    <Grid ColumnDefinitions="*, Auto"
+                                          IsVisible="{Binding IsFading}">
+                                        <ProgressBar Grid.Column="0" 
+                                                     Height="10"
+                                                     Foreground="Yellow"
+                                                     Margin="0,0,5,0"
+                                                     Maximum="{Binding FadeDuration}"
+                                                     Value="{Binding FadeRemaining}"/>
+                                        <TextBlock Grid.Column="1"
+                                                   HorizontalAlignment="Left"
+                                                   Text="{Binding FadeRemainingSpan, StringFormat={}{0:mm\\:ss}}"/>
+                                    </Grid>
+                                </StackPanel>
+
+
+                                <TextBlock HorizontalAlignment="Left"
+                                           VerticalAlignment="Bottom"
+                                           FontSize="10"
+                                           Foreground="Lime"
+                                           IsVisible="{Binding Loop}"
+                                           Text="Loop" />
+
+
+                                <TextBlock HorizontalAlignment="Right"
+                                           VerticalAlignment="Bottom"
+                                           FontSize="10"
+                                           Foreground="Yellow"
+                                           IsVisible="{Binding Fade}"
+                                           Text="{Binding FadeDuration, StringFormat=Fade ({0})}" />
+                            </Grid>
+                        </Button.Content>
+                    </Button>
+                </controls:SoundButtonControl.Content>
+            </controls:SoundButtonControl>
+        </DataTemplate>
+    </Window.DataTemplates>
+
+    <Window.Styles>
+        <Style Selector="ItemsControl > ContentPresenter" x:DataType="models:SoundModel">
+            <Setter Property="(Grid.Column)" Value="{Binding Column}" />
+            <Setter Property="(Grid.Row)" Value="{Binding Row}" />
+        </Style>
+        <StyleInclude Source="avares://Avalonia.Xaml.Interactions.Draggable/Styles.axaml" />
+        <Style Selector=":is(TabStrip).draggable">
+            <Setter Property="ItemsPanel">
+                <ItemsPanelTemplate>
+                    <WrapPanel Orientation="Horizontal" />
+                </ItemsPanelTemplate>
+            </Setter>
+        </Style>
+        <Style Selector=":is(TabStrip).draggable > :is(TabStripItem)">
+            <Setter Property="ZIndex" Value="0" />
+            <Setter Property="(i:Interaction.Behaviors)">
+                <i:BehaviorCollectionTemplate>
+                    <i:BehaviorCollection>
+                        <id:ItemDragBehavior HorizontalDragThreshold="3" VerticalDragThreshold="3" />
+                    </i:BehaviorCollection>
+                </i:BehaviorCollectionTemplate>
+            </Setter>
+        </Style>
+        <Style Selector=":is(TabStrip).draggable > :is(TabStripItem):pressed">
+            <Setter Property="ZIndex" Value="1" />
+        </Style>
+    </Window.Styles>
+
+    <Grid RowDefinitions="Auto, Auto, *">
+        <Menu Grid.Row="0">
+            <MenuItem Header="File">
+                <MenuItem Header="Add Board"
+                          Command="{Binding AddSoundBoard}" />
+                <MenuItem Header="Load Board"
+                          Command="{Binding LoadSoundBoard}"
+                          CommandParameter="{Binding $parent[Window]}" />
+                <MenuItem Header="Load Collection"
+                          Command="{Binding LoadSoundBoards}"
+                          CommandParameter="{Binding $parent[Window]}" />
+                <MenuItem Header="Save Board"
+                          Command="{Binding SaveSoundBoard}"
+                          CommandParameter="{Binding $parent[Window]}" />
+                <MenuItem Header="Save Collection"
+                          Command="{Binding SaveSoundBoards}"
+                          CommandParameter="{Binding $parent[Window]}" />
+            </MenuItem>
+        </Menu>
+
+        <TabStrip Grid.Row="1"
+                  Classes="draggable"
+                  ItemsSource="{Binding SoundBoards}"
+                  SelectedItem="{Binding SelectedSoundBoard}">
+            <TabStrip.ItemTemplate>
+                <DataTemplate>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock VerticalAlignment="Center"
+                                   IsVisible="{Binding !IsEditing}"
+                                   Text="{Binding Name}" />
+                        <TextBox VerticalAlignment="Center"
+                                 IsVisible="{Binding IsEditing}"
+                                 Text="{Binding Name}" />
+                        <Button IsVisible="{Binding IsEditing}"
+                                Margin="5,0,0,0"
+                                Width="25"
+                                Height="25"
+                                Content="X"
+                                FontSize="8"
+                                Command="{Binding Remove}" />
+                    </StackPanel>
+                </DataTemplate>
+            </TabStrip.ItemTemplate>
+        </TabStrip>
+
+        <UserControl Grid.Row="2"
+                     DataContext="{Binding SelectedSoundBoard}">
+            <Grid RowDefinitions="Auto, *">
+                <StackPanel Grid.Row="0">
+                    <Slider Minimum="1"
+                            Maximum="20"
+                            IsVisible="{Binding IsEditing, FallbackValue=false}"
+                            IsSnapToTickEnabled="True"
+                            TickPlacement="BottomRight"
+                            TickFrequency="1"
+                            Value="{Binding BoardColumns}" />
+
+                    <Slider Minimum="1"
+                            Maximum="20"
+                            IsVisible="{Binding IsEditing, FallbackValue=false}"
+                            IsSnapToTickEnabled="True"
+                            TickPlacement="BottomRight"
+                            TickFrequency="1"
+                            Value="{Binding BoardRows}" />
+                </StackPanel>
+                <UserControl Grid.Row="1"
+                             Content="{Binding ButtonControl}"
+                             IsHitTestVisible="True"
+                             Background="Transparent">
+                    <UserControl.ContextMenu>
+                        <ContextMenu>
+                            <MenuItem Header="Toggle Edit"
+                                      Command="{Binding EditCommand}" />
+                        </ContextMenu>
+                    </UserControl.ContextMenu>
+                </UserControl>
+            </Grid>
+        </UserControl>
+    </Grid>
+</Window>

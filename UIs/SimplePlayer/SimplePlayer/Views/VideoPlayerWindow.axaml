@@ -7,6 +7,7 @@
         x:Class="SimplePlayer.Views.VideoPlayerWindow"
         Title="VideoPlayerWindow"
         x:DataType="viewModels:MainViewModel"
+        Icon="/Assets/032forIc.ico"
         Background="Black">
     <Grid>
         <UserControl IsVisible="{Binding VideoPlayerVisible}"

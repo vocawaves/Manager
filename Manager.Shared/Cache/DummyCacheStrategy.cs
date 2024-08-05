@@ -13,15 +13,12 @@ namespace Manager.Shared.Cache;
 public class DummyCacheStrategy : ICacheStrategy
 {
     #region IManagerComponent
-
-    public event AsyncEventHandler? InitSuccess;
-    public event AsyncEventHandler<InitFailedEventArgs>? InitFailed;
-    public bool Initialized { get; } = true;
     public ComponentManager ComponentManager { get; }
     public string Name { get; }
     public ulong Parent { get; }
     
     #endregion
+    
     private readonly ILogger<DummyCacheStrategy>? _logger;
     
     public DummyCacheStrategy(ComponentManager componentManager, string name, ulong parent)
@@ -32,11 +29,6 @@ public class DummyCacheStrategy : ICacheStrategy
         _logger = componentManager.CreateLogger<DummyCacheStrategy>();
     }
     
-    public ValueTask<bool> InitializeAsync(params string[] options)
-    {
-        return ValueTask.FromResult(true);
-    }
-
     public ValueTask<bool> CheckForExistingCacheAsync(MediaItem mediaItem, string cacheName)
     {
         _logger?.LogDebug("Checking for existing cache for {PathTitle}", mediaItem.PathTitle);
