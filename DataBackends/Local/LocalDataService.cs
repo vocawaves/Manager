@@ -31,11 +31,12 @@ public class LocalDataService : IManagerComponent<LocalDataServiceConfiguration>
         ComponentManager = componentManager;
         Name = name;
         Parent = parent;
-        var strategyConfig = new FolderCacheStrategyConfiguration
-        {
-            CacheFolder = Path.Combine(Directory.GetCurrentDirectory(), "ManagerCache")
-        };
-        var strategy = componentManager.CreateComponent<FolderCacheStrategy, FolderCacheStrategyConfiguration>("LocalCacheStrategy", parent, strategyConfig);
+        //var strategyConfig = new FolderCacheStrategyConfiguration
+        //{
+        //    CacheFolder = Path.Combine(Directory.GetCurrentDirectory(), "ManagerCache")
+        //};
+        //var strategy = componentManager.CreateComponent<FolderCacheStrategy, FolderCacheStrategyConfiguration>("LocalCacheStrategy", parent, strategyConfig);
+        var strategy = componentManager.CreateComponent<DummyCacheStrategy>("NoCacheStrategy", parent);
         if (strategy is null)
         {
             _logger?.LogError("Failed to create cache strategy");
