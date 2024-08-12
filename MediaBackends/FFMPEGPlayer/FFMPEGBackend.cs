@@ -52,7 +52,7 @@ public class FFMPEGBackend : IVideoBackendService, INeedsInitialization
 #endif
             unsafe
             {
-                ffmpeg.av_log_set_callback((av_log_set_callback_callback_func)LogCallback);   
+                
             }
             _logger?.LogDebug("Set log callback");
             this.Initialized = true;
@@ -65,17 +65,6 @@ public class FFMPEGBackend : IVideoBackendService, INeedsInitialization
             this._logger?.LogError(e, "Failed to initialize FFMPEG backend");
             return ValueTask.FromResult(false);
         }
-    }
-    
-    private unsafe void LogCallback(void* p0, int level, string format, byte* vl)
-    {
-        if (level > ffmpeg.av_log_get_level()) return;
-        var lineSize = 1024;
-        var lineBuffer = stackalloc byte[lineSize];
-        var printPrefix = 1;
-        ffmpeg.av_log_format_line(p0, level, format, vl, lineBuffer, lineSize, &printPrefix);
-        var line = Marshal.PtrToStringAnsi((IntPtr)lineBuffer);
-        _logger?.LogDebug(line);
     }
 
     public ValueTask<bool> IsMediaItemSupportedAsync(MediaItem mediaItem)

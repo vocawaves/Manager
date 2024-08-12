@@ -53,7 +53,8 @@ public unsafe class VideoDecoder
         }
 
         var tempContext = _formatContext;
-        var error = ffmpeg.avformat_open_input(&tempContext, path, null, null);
+        AVDictionary* options = null;
+        var error = ffmpeg.avformat_open_input(&tempContext, path, null, &options);
         if (error < 0)
         {
             _logger?.LogError($"Failed to open input file: {error}");
@@ -78,6 +79,12 @@ public unsafe class VideoDecoder
         if (error < 0)
         {
             _logger?.LogError($"Failed to copy codec parameters to codec context: {error}");
+            return false;
+        }
+        error = ffmpeg.avcodec_open2(_codecContext, codec, null);
+        if (error < 0)
+        {
+            _logger?.LogError($"Failed to open codec: {error}");
             return false;
         }
         Duration = TimeSpan.FromMilliseconds(_videoStream->duration * ffmpeg.av_q2d(_videoStream->time_base) * 1000);
@@ -106,7 +113,6 @@ public unsafe class VideoDecoder
         return true;
     }
 
-    public Queue<AVFrame> Frames { get; } = new();
     private readonly object _frameReadLock = new();
     private void PushFrame(object? sender, ElapsedEventArgs e)
     {
@@ -120,29 +126,29 @@ public unsafe class VideoDecoder
                 result = ffmpeg.av_read_frame(_formatContext, MainPacket);
                 if (result == ffmpeg.AVERROR_EOF || result < 0)
                 {
-                    var outFrame = *MainFrame;
-                    Frames.Enqueue(outFrame);
-                    OnFrameDecoded?.Invoke();
+                    Stop();
                     return;
                 }
                 if (MainPacket->stream_index != _videoStreamIndex)
                     continue;
-                ffmpeg.avcodec_send_packet(_codecContext, MainPacket);
+                result = ffmpeg.avcodec_send_packet(_codecContext, MainPacket);
+                if (result < 0) continue;
                 result = ffmpeg.avcodec_receive_frame(_codecContext, MainFrame);
                 if (result < 0) continue;
-                var outFrame2 = *MainFrame;
-                Frames.Enqueue(outFrame2);
+                result = ffmpeg.sws_scale(_convert, MainFrame->data, MainFrame->linesize, 0, MainFrame->height, _targetData, _targetLineSize);
+                if (result < 0)
+                {
+                    _logger?.LogError($"Failed to scale frame: {result}");
+                    return;
+                }
                 OnFrameDecoded?.Invoke();
                 return;
             }
         }
     }
     
-    public void FrameConvert(AVFrame* sourceFrame, ref byte_ptrArray8 existingData, ref int_array8 existingLineSize)
+    public void FrameConvert(AVFrame* sourceFrame, ref byte_ptrArray8 exisData, ref int_array8 exisLinesize)
     {
-        ffmpeg.sws_scale(_convert, sourceFrame->data, sourceFrame->linesize, 0, sourceFrame->height, existingData, existingLineSize);
-        existingData.UpdateFrom(_targetData);
-        existingLineSize.UpdateFrom(_targetLineSize);
     }
     
     private bool InitConvert(int sourceWidth, int sourceHeight, AVPixelFormat sourceFormat, int targetWidth, int targetHeight, AVPixelFormat targetFormat)

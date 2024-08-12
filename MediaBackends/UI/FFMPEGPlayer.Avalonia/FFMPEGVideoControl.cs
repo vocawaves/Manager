@@ -32,36 +32,26 @@ public class FFMPEGVideoControl : UserControl
         _channel.Decoder.OnFrameDecoded = OnFramePushed;
     }
 
-    private byte_ptrArray8 _targetData = new byte_ptrArray8();
-    private int_array8 _targetLineSize = new int_array8();
-
     private unsafe void OnFramePushed()
     {
         if (_channel.Decoder == null)
             return;
-        var frame = _channel.Decoder.Frames.Dequeue();
-        _imageBitmap ??= new WriteableBitmap(new PixelSize(_channel.Decoder.FrameWidth, _channel.Decoder.FrameHeight), new Vector(96, 96),
-            PixelFormat.Bgra8888);
+        var frame = _channel.Decoder.MainFrame;
+        if (_imageBitmap == null)
+        {
+            _imageBitmap = new WriteableBitmap(new PixelSize(_channel.Decoder.FrameWidth, _channel.Decoder.FrameHeight), new Vector(96, 96),
+                PixelFormat.Bgra8888);
+            Dispatcher.UIThread.InvokeAsync(() => _imageContent.Source = _imageBitmap);
+        }
 
         var bitmapLock = _imageBitmap.Lock();
-        var data = (byte*)bitmapLock.Address;
-        var lineSize = bitmapLock.RowBytes;
-
-        try
+        for (var i = 0; i < frame->height; i++)
         {
-            _channel.Decoder.FrameConvert(&frame, ref _targetData, ref _targetLineSize);
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine(e);
-            return;
-        }
-        for (var i = 0; i < frame.height; i++)
-        {
-            Unsafe.CopyBlock(data + i * lineSize, _targetData[0] + i * _targetLineSize[0], (uint)_targetLineSize[0]);
+            Unsafe.CopyBlock((bitmapLock.Address + bitmapLock.RowBytes * i).ToPointer(),
+                (_channel.Decoder._targetData[0] + i * _channel.Decoder._targetLineSize[0]), (uint)_channel.Decoder._targetLineSize[0]);
         }
 
         bitmapLock.Dispose();
-        Dispatcher.UIThread.InvokeAsync(() => { _imageContent.Source = _imageBitmap; });
+        Dispatcher.UIThread.InvokeAsync(() => { _imageContent.InvalidateVisual(); });
     }
 }

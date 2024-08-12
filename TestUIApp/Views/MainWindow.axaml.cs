@@ -8,6 +8,7 @@ using Manager.DataBackends.Local;
 using Manager.Shared;
 using Manager.Shared.Entities;
 using Manager.Shared.Extensions;
+using Microsoft.Extensions.Logging;
 
 namespace TestUIApp.Views;
 
@@ -21,7 +22,8 @@ public partial class MainWindow : Window
     protected override async void OnInitialized()
     {
         base.OnInitialized();
-        var cm = new ComponentManager(null);
+        var logFactory = LoggerFactory.Create(opt => opt.AddConsole());
+        var cm = new ComponentManager(logFactory);
         var localBackend = cm.CreateComponent<LocalDataService>("LocalBackend", 0);
         if (localBackend == null)
             return;
@@ -33,7 +35,7 @@ public partial class MainWindow : Window
         if (!could)
             return;
 
-        var testPath = "C:\\Users\\Sekoree\\Videos\\2023.02.09_20.37.34_Audiosurf2_mODt7wC5bd.mp4";
+        var testPath = "C:\\Users\\Sekoree\\Videos\\07hxZ6aQhSaaVdyu.mp4";
         var mediaItem = await localBackend.GetMediaItemAsync(testPath);
         if (mediaItem == null)
             return;
