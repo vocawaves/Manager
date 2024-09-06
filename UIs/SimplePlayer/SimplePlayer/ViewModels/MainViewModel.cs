@@ -55,6 +55,8 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty] [NotifyPropertyChangedFor(nameof(RepeatModeString))]
     private int _repeatMode;
 
+    [ObservableProperty] private int _toNextDelay = 0;
+
     private SoundBoardsViewModel _soundBoardsVm;
 
     public string RepeatModeString => RepeatMode switch
@@ -103,6 +105,7 @@ public partial class MainViewModel : ViewModelBase
             RemainingTime = TimeSpan.Zero;
             VideoPlayerVisible = false;
         });
+        await Task.Delay(TimeSpan.FromSeconds(ToNextDelay));
         if (RepeatMode == 1)
             await Dispatcher.UIThread.InvokeAsync(async () => await Play());
         else if (RepeatMode == 2)

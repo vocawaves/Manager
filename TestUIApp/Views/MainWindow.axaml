@@ -12,6 +12,22 @@
     <Design.DataContext>
         <!-- This only sets the DataContext for the previewer in an IDE,
              to set the actual DataContext for runtime, set the DataContext property in code (look at App.axaml.cs) -->
-        <vm:MainWindowViewModel/>
+        <vm:MainWindowViewModel />
     </Design.DataContext>
+
+    <Grid RowDefinitions="Auto, Auto, *">
+        <TextBox Grid.Row="0"
+                 Name="PathTextBox"
+                 Watermark="Video Path" />
+        <Button Grid.Row="1"
+                Content="Play"
+                HorizontalAlignment="Stretch"
+                HorizontalContentAlignment="Center"
+                Click="Button_OnClick" />
+
+        <UserControl Grid.Row="2"
+                     Name="VideoPlayer"
+                     HorizontalAlignment="Stretch"
+                     VerticalAlignment="Stretch" />
+    </Grid>
 </Window>

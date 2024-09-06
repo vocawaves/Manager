@@ -231,7 +231,7 @@
                 </Expander>
                 <Button HorizontalAlignment="Center"
                         Content="Open SoundBoard"
-                        Command="{Binding OpenSoundBoard}"/>
+                        Command="{Binding OpenSoundBoard}" />
                 <Separator Height="2"
                            Width="50"
                            HorizontalAlignment="Center" />
@@ -262,9 +262,16 @@
                         IsSnapToTickEnabled="True"
                         TickPlacement="BottomRight"
                         TickFrequency="1"
-                        Value="{Binding RepeatMode}"/>
+                        Value="{Binding RepeatMode}" />
                 <TextBlock Margin="5,0"
                            Text="{Binding RepeatModeString}" />
+                <NumericUpDown Margin="5,0"
+                               Value="{Binding ToNextDelay}"
+                               Increment="1"
+                               Minimum="0"
+                               FormatString="N0"
+                               Text="Delay To Next Track"
+                               ParsingNumberStyle="Integer" />
             </StackPanel>
 
         </ScrollViewer>

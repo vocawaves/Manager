@@ -74,7 +74,8 @@ public class FFMPEGChannel : IVideoChannel
 
     public ValueTask<bool> StopAsync()
     {
-        throw new NotImplementedException();
+        this.Decoder?.Stop();
+        return ValueTask.FromResult(true);
     }
 
     public ValueTask<ChannelState> GetStateAsync()

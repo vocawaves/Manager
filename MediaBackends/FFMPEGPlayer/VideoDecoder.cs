@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Timers;
 using FFmpeg.AutoGen;
@@ -36,6 +37,10 @@ public unsafe class VideoDecoder
     
     public Timer? DecodeTimer { get; private set; }
     public bool IsPlaying { get; private set; } = false;
+    
+    private long _currentFrame = 0;
+    private long _totalFrames = 0;
+    private long _startTimestamp = 0;
     
 
     public VideoDecoder(ILogger<VideoDecoder>? logger = null) 
@@ -92,6 +97,7 @@ public unsafe class VideoDecoder
         _codecName = ffmpeg.avcodec_get_name(_codecId);
         _bitRate = _codecContext->bit_rate;
         _frameRate = ffmpeg.av_q2d(_videoStream->r_frame_rate);
+        _totalFrames = _videoStream->nb_frames;
         FrameHeight = _codecContext->height;
         FrameWidth = _codecContext->width;
         FrameDuration = TimeSpan.FromMilliseconds(1000 / _frameRate);
@@ -108,7 +114,7 @@ public unsafe class VideoDecoder
             _logger?.LogError("Failed to allocate frame or packet");
             return false;
         }
-        DecodeTimer = new Timer(FrameDuration);
+        DecodeTimer = new Timer(TimeSpan.FromMilliseconds(1));
         DecodeTimer.Elapsed += PushFrame;
         return true;
     }
@@ -116,6 +122,12 @@ public unsafe class VideoDecoder
     private readonly object _frameReadLock = new();
     private void PushFrame(object? sender, ElapsedEventArgs e)
     {
+        if (!IsPlaying)
+            return;
+        var shouldBeFrame = (long)((Stopwatch.GetTimestamp() - _startTimestamp) / (Stopwatch.Frequency / _frameRate));
+        if (shouldBeFrame == _currentFrame)
+            return;
+        _currentFrame = shouldBeFrame;
         lock (_frameReadLock)
         {
             int result = -1;
@@ -185,6 +197,7 @@ public unsafe class VideoDecoder
         if (IsPlaying)
             return;
         DecodeTimer?.Start();
+        _startTimestamp = Stopwatch.GetTimestamp();
         IsPlaying = true;
     }
     
