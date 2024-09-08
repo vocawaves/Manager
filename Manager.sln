@@ -55,6 +55,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FFMPEGPlayer.Avalonia", "Me
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestUIApp", "TestUIApp\TestUIApp.csproj", "{58D788BD-840E-46FE-A21E-D62CB6431EE2}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FV", "FV\FV.csproj", "{6D1512D0-D8E8-427B-8065-A73C192582F6}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FV.Test", "FV.Test\FV.Test.csproj", "{C4CD2C79-143D-4074-8143-0E3508A1577D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -129,6 +133,14 @@ Global
 		{58D788BD-840E-46FE-A21E-D62CB6431EE2}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{58D788BD-840E-46FE-A21E-D62CB6431EE2}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{58D788BD-840E-46FE-A21E-D62CB6431EE2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6D1512D0-D8E8-427B-8065-A73C192582F6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6D1512D0-D8E8-427B-8065-A73C192582F6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6D1512D0-D8E8-427B-8065-A73C192582F6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6D1512D0-D8E8-427B-8065-A73C192582F6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C4CD2C79-143D-4074-8143-0E3508A1577D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C4CD2C79-143D-4074-8143-0E3508A1577D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C4CD2C79-143D-4074-8143-0E3508A1577D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C4CD2C79-143D-4074-8143-0E3508A1577D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
