@@ -6,6 +6,7 @@ using Sdcb.FFmpeg.Codecs;
 using Sdcb.FFmpeg.Formats;
 using Sdcb.FFmpeg.Raw;
 using Sdcb.FFmpeg.Swscales;
+using Sdcb.FFmpeg.Toolboxs.Extensions;
 using Sdcb.FFmpeg.Utils;
 using Timer = System.Timers.Timer;
 
@@ -62,13 +63,14 @@ public class VideoDecoder : IDisposable
         CodecContext.FillParameters(VideoStream.Value.Codecpar);
         CodecContext.Open(codec);
 
-        Duration = TimeSpan.FromMilliseconds(VideoStream.Value.Duration * VideoStream.Value.TimeBase.ToDouble() * 1000);
+        var durInSec = VideoStream.Value.GetDurationInSeconds();
+        Duration = TimeSpan.FromSeconds(durInSec);
         Bitrate = VideoStream.Value.Codecpar.BitRate;
         FrameRate = VideoStream.Value.AvgFrameRate.ToDouble();
         TotalFrames = VideoStream.Value.NbFrames;
         FrameHeight = VideoStream.Value.Codecpar.Height;
         FrameWidth = VideoStream.Value.Codecpar.Width;
-        FrameDuration = TimeSpan.FromSeconds(1 / FrameRate);
+        FrameDuration = double.IsNaN(FrameRate) ? TimeSpan.Zero : TimeSpan.FromSeconds(1 / FrameRate);
 
         SwsContext = new PixelConverter(FrameWidth, FrameHeight, CodecContext.PixelFormat, FrameWidth, FrameHeight,
             AVPixelFormat.Bgr0);
@@ -90,6 +92,8 @@ public class VideoDecoder : IDisposable
         DecodeTimer.Elapsed += PushFrame;
         return true;
     }
+    
+    private object _lock = new object();
     private void PushFrame(object? sender, ElapsedEventArgs args)
     {
         if (!IsPlaying)
@@ -98,7 +102,7 @@ public class VideoDecoder : IDisposable
         if (shouldBeFrame == CurrentFrame)
             return;
         CurrentFrame = shouldBeFrame;
-        lock (MainPacket!)
+        lock (_lock)
         {
             try
             {
