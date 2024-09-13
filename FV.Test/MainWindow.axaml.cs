@@ -10,7 +10,7 @@ public partial class MainWindow : Window
     public VideoDecoder? Decoder { get; set; }
     public MediaFoundationReader? Reader { get; set; }
     public WasapiOut? WasapiOut { get; set; }
-    
+
     public MainWindow()
     {
         InitializeComponent();
@@ -28,7 +28,7 @@ public partial class MainWindow : Window
             WasapiOut?.Dispose();
             WasapiOut = null;
         }
-        
+
         var path = PathBox.Text;
         if (string.IsNullOrWhiteSpace(path))
             return;
@@ -36,19 +36,25 @@ public partial class MainWindow : Window
             path = path[1..^1];
         if (!File.Exists(path))
             return;
-        
+
         Decoder = new VideoDecoder();
+
         if (!Decoder.InitializeFromFile(path))
             return;
-        
+
         var control = new VideoControl(Decoder);
-        Video.Content = control;
-        
+        var control1 = new VideoControl(Decoder, control.VideoBitmap);
+        var control2 = new VideoControl(Decoder, control.VideoBitmap);
+        var control3 = new VideoControl(Decoder, control.VideoBitmap);
+        Video0.Content = control;
+        Video1.Content = control1;
+        Video2.Content = control2;
+        Video3.Content = control3;
         //set up audio
         Reader = new MediaFoundationReader(path);
         WasapiOut = new WasapiOut();
         WasapiOut.Init(Reader);
-        Decoder.Start();
         WasapiOut.Play();
+        Decoder.Start();
     }
 }

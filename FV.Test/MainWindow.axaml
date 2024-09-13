@@ -5,6 +5,21 @@
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="FV.Test.MainWindow"
         Title="FV.Test">
+    <Window.Styles>
+        <!--<Style Selector="UserControl">
+            <Style.Animations>
+                <Animation Duration="0:0:5" IterationCount="Infinite">
+                    <KeyFrame Cue="0%">
+                        <Setter Property="RotateTransform.Angle" Value="0"/>
+                    </KeyFrame>
+                    <KeyFrame Cue="100%">
+                        <Setter Property="RotateTransform.Angle" Value="360"/>
+                    </KeyFrame>
+                </Animation>
+            </Style.Animations>
+        </Style>-->
+    </Window.Styles>
+    
     <Grid RowDefinitions="Auto, Auto, *">
         <TextBox Grid.Row="0"
                  Name="PathBox"/>
@@ -13,7 +28,29 @@
                 HorizontalContentAlignment="Center"
                 Content="Play"
                 Click="Button_OnClick"/>
-        <UserControl Grid.Row="2"
-                     Name="Video"/>
+                
+        <Grid Grid.Row="2" 
+              ColumnDefinitions="*,*"
+              RowDefinitions="*,*">
+            <UserControl Grid.Column="0"
+                         Grid.Row="0"
+                         HorizontalContentAlignment="Right"
+                         Name="Video0"/>
+            
+            <UserControl Grid.Column="1"
+                         Grid.Row="0"
+                         HorizontalContentAlignment="Left"
+                         Name="Video1"/>
+            
+            <UserControl Grid.Column="0"
+                         Grid.Row="1"
+                         HorizontalContentAlignment="Right"
+                         Name="Video2"/>
+            
+            <UserControl Grid.Column="1"
+                         Grid.Row="1"
+                         HorizontalContentAlignment="Left"
+                         Name="Video3"/>
+        </Grid>
     </Grid>
 </Window>
