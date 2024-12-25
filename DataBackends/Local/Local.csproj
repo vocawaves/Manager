@@ -1,18 +1,19 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>net8.0</TargetFramework>
+        <TargetFramework>net9.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
-        <RootNamespace>Manager.DataBackends.Local</RootNamespace>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     </PropertyGroup>
 
     <ItemGroup>
-      <ProjectReference Include="$(SolutionDir)\Manager.Shared\Manager.Shared.csproj" />
+      <ProjectReference Include="..\..\Manager2.Shared\Manager2.Shared.csproj" />
     </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="Mime" Version="3.6.0" />
+      <PackageReference Include="FFmpeg.GPL" Version="20241223.1.0" />
+      <PackageReference Include="Sdcb.FFmpeg" Version="7.0.0" />
     </ItemGroup>
 
 </Project>

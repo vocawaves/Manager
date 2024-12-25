@@ -1,4 +1,6 @@
 using System.IO;
+using System.Linq;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using NAudio.Wave;
@@ -34,23 +36,32 @@ public partial class MainWindow : Window
             return;
         if (path.StartsWith("\"") || path.StartsWith("\""))
             path = path[1..^1];
-        if (!File.Exists(path))
-            return;
+        //if (!File.Exists(path))
+        //    return;
 
         Decoder = new VideoDecoder();
 
         if (!Decoder.InitializeFromFile(path))
             return;
 
-        var control = new VideoControl(Decoder);
-        var control1 = new VideoControl(Decoder, control.VideoBitmap);
-        var control2 = new VideoControl(Decoder, control.VideoBitmap);
-        var control3 = new VideoControl(Decoder, control.VideoBitmap);
+        var control = new AniVideoControl(Decoder);
+        var control1 = new AniVideoControl(Decoder, control.WBitmap);
+        var control2 = new AniVideoControl(Decoder, control.WBitmap);
         Video0.Content = control;
-        Video1.Content = control1;
-        Video2.Content = control2;
-        Video3.Content = control3;
-        //set up audio
+        var window = new Window
+        {
+            Content = control1
+        };
+        window.Show();
+        window.Position = Screens.All[1].Bounds.Center;
+        window.WindowState = WindowState.FullScreen;
+        //var window1 = new Window
+        //{
+        //    Content = control2
+        //};
+        //window1.Show();
+        //window1.Position = Screens.All[2].Bounds.Center;
+        //window1.WindowState = WindowState.FullScreen;
         Reader = new MediaFoundationReader(path);
         WasapiOut = new WasapiOut();
         WasapiOut.Init(Reader);

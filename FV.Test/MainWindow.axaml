@@ -2,6 +2,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:test="clr-namespace:FV.Test"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="FV.Test.MainWindow"
         Title="FV.Test">
@@ -33,24 +34,10 @@
               ColumnDefinitions="*,*"
               RowDefinitions="*,*">
             <UserControl Grid.Column="0"
+                         Grid.ColumnSpan="2"
                          Grid.Row="0"
-                         HorizontalContentAlignment="Right"
+                         Grid.RowSpan="2"
                          Name="Video0"/>
-            
-            <UserControl Grid.Column="1"
-                         Grid.Row="0"
-                         HorizontalContentAlignment="Left"
-                         Name="Video1"/>
-            
-            <UserControl Grid.Column="0"
-                         Grid.Row="1"
-                         HorizontalContentAlignment="Right"
-                         Name="Video2"/>
-            
-            <UserControl Grid.Column="1"
-                         Grid.Row="1"
-                         HorizontalContentAlignment="Left"
-                         Name="Video3"/>
         </Grid>
     </Grid>
 </Window>

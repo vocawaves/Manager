@@ -1,5 +1,7 @@
 ﻿using Avalonia;
 using System;
+using Avalonia.Rendering.Composition;
+using Avalonia.Threading;
 
 namespace FV.Test;
 
@@ -15,6 +17,10 @@ class Program
     // Avalonia configuration, don't remove; also used by visual designer.
     public static AppBuilder BuildAvaloniaApp()
         => AppBuilder.Configure<App>()
+            .With(new SkiaOptions()
+            {
+                MaxGpuResourceSizeBytes = 1920 * 1080 * 4 * 100, // ~800mb 100x 1920 x 1080 textures.
+            })
             .UsePlatformDetect()
             .WithInterFont()
             .LogToTrace();

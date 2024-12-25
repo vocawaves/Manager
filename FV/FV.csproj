@@ -8,7 +8,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <PackageReference Include="FFmpeg.GPL" Version="20240907.1.0" />
+      <PackageReference Include="FFmpeg.GPL" Version="20241003.1.0" />
       <PackageReference Include="Sdcb.FFmpeg" Version="7.0.0" />
     </ItemGroup>
 

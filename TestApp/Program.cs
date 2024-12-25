@@ -1,141 +1,120 @@
 ﻿// See https://aka.ms/new-console-template for more information
 
-using Manager.DataBackends.Local;
-using Manager.MediaBackends.BassPlayer;
-using Manager.MediaBackends.LibVLCPlayer;
-using Manager.Shared;
-using Manager.Shared.Cache;
-using Manager.Shared.Entities;
-using Manager.Shared.Extensions;
-using Manager.Shared.Interfaces.Audio;
+using System.Diagnostics;
+using Local;
+using Manager.MediaBackends;
+using Manager2.Shared;
 using Microsoft.Extensions.Logging;
-using ValueTaskSupplement;
+using Sdcb.FFmpeg.Codecs;
+using Sdcb.FFmpeg.Formats;
+using Sdcb.FFmpeg.Toolboxs.Extensions;
+using Sdcb.FFmpeg.Utils;
+using LogLevel = Sdcb.FFmpeg.Raw.LogLevel;
 
 Console.WriteLine("Hello, World!");
 
-var loggerFactory = LoggerFactory.Create(builder =>
+//FFmpegLogger.LogLevel = LogLevel.Debug;
+
+var startTime = Stopwatch.GetTimestamp();
+
+var loggingFactory = LoggerFactory.Create(builder =>
 {
-    builder.SetMinimumLevel(LogLevel.Debug);
-    //console with loglevel debug
     builder.AddConsole();
+    builder.SetMinimumLevel(Microsoft.Extensions.Logging.LogLevel.Trace);
 });
+LoggingHelper.SetLoggerFactory(loggingFactory);
 
-var logger = loggerFactory.CreateLogger<Program>();
-var componentManager = new ComponentManager(loggerFactory);
+var programArch = Environment.Is64BitProcess ? "x64" : "x86";
+Console.WriteLine($"Program architecture: {programArch}");
 
-var dummyCache = componentManager.CreateComponent<DummyCacheStrategy>("DummyCache", 0);
-if (dummyCache is null)
+var cachePath = Path.Combine(Directory.GetCurrentDirectory(), "cache");
+var f = new LocalDataService(cachePath, loggingFactory.CreateLogger<LocalDataService>());
+var b = new BassPlayer("BassPlayer", loggingFactory.CreateLogger<BassPlayer>());
+
+var couldInit = await b.InitializeAsync();
+if (!couldInit)
 {
-    logger.LogError("Failed to create cache strategy");
+    Console.WriteLine("Failed to initialize BassPlayer");
     return;
 }
 
-var localDataConfig = new LocalDataServiceConfiguration
+var me = await f.GetMediaItemByPathAsync("C:\\Users\\Sekoree\\Music\\IA_05 -SHINE-\\01_02_残響ディスタンス (feat. hirihiri & lilbesh ramko).flac");
+if (me == null)
 {
-    CacheStrategy = dummyCache
-};
-var localDataService =
-    componentManager.CreateComponent<LocalDataService, LocalDataServiceConfiguration>("LocalDataService", 0,
-        localDataConfig);
-
-if (localDataService is null)
-{
-    logger.LogError("Failed to create LocalDataService");
+    Console.WriteLine("Media item is null");
     return;
 }
 
-var vlcBackend = componentManager.CreateComponent<LibVLCBackend>("VlcBackend", 0);
-if (vlcBackend is null)
+//var couldCache = await me.CacheAsync();
+//if (!couldCache)
+//{
+//    Console.WriteLine("Failed to cache media item");
+//    return;
+//}
+
+//var ms = await me.DefaultAudioStream!.ExtractStreamAsync();
+//if (!ms)
+//{
+//    Console.WriteLine("Memory stream is null");
+//    return;
+//}
+
+var channel = await b.CreateMediaChannelAsync(me.DefaultAudioStream!);
+if (channel == null)
 {
-    logger.LogError("Failed to create VLC backend");
+    Console.WriteLine("Channel is null");
     return;
 }
 
-var init = await vlcBackend.InitializeAsync();
-if (!init)
-{
-    logger.LogError("Failed to initialize VLC backend");
-    return;
-}
+await channel.PlayAsync();
 
-var bassBackend = componentManager.CreateComponent<BassBackend>("BassBackend", 0);
-if (bassBackend is null)
-{
-    logger.LogError("Failed to create Bass backend");
-    return;
-}
+var endTime = Stopwatch.GetTimestamp();
+var ts = TimeSpan.FromSeconds((endTime - startTime) / (double)Stopwatch.Frequency);
+Console.WriteLine($"Time: {ts}");
+Console.ReadLine();
 
-var initBass = await bassBackend.InitializeAsync();
-if (!initBass)
-{
-    logger.LogError("Failed to initialize Bass backend");
-    return;
-}
-        
-var mediaItem = await localDataService.GetMediaItemAsync("C:\\Users\\Sekoree\\Videos\\11 - Shinjidai(1).mp4");
-if (mediaItem is null)
-{
-    logger.LogError("Failed to get media item");
-    return;
-}
-
-var cached = await mediaItem.CacheAsync();
-
-var channel = await vlcBackend.CreateChannelAsync(mediaItem);
-if (channel is null)
-{
-    logger.LogError("Failed to create channel");
-    return;
-}
-
-var channel2 = await vlcBackend.CreateChannelAsync(mediaItem);
-if (channel2 is null)
-{
-    logger.LogError("Failed to create channel 2");
-    return;
-}
-
-var channel3 = await bassBackend.CreateChannelAsync(mediaItem);
-if (channel3 is null)
-{
-    logger.LogError("Failed to create channel 3");
-    return;
-}
-
-//mute channel 1 and 2
-if (channel is IAudioChannel audioChannel && channel2 is IAudioChannel audioChannel2)
-{
-    await audioChannel.SetVolumeAsync(0);
-    await audioChannel2.SetVolumeAsync(0);
-}
-
-var testScene = componentManager.CreateComponent<Scene>("TestScene", 0);
-if (testScene is null)
-{
-    logger.LogError("Failed to create test scene");
-    return;
-}
-
-await ValueTaskEx.WhenAll(
-    channel.PlayAsync(),
-    channel2.PlayAsync()
-);
-await channel3.PlayAsync();
-
-//await Task.Delay(5000);
+//var timeStart = Stopwatch.GetTimestamp();
+//var filePath = Path.Combine(Directory.GetCurrentDirectory(), "output.mp4");
+//using var inFc = FormatContext.OpenInputUrl("E:\\IMAS_Content\\MKVs\\THE IDOLM@STER MOVIE\\THE IDOLM@STER MOVIE.mkv");
+////using var inFc = FormatContext.OpenInputUrl(args[0].StartsWith("\"") ? args[0][1..^1] : args[0]);
+////using var inFc = FormatContext.OpenInputUrl("E:\\IMAS_Content\\MKVs\\THE IDOLM@STER MOVIE\\THE IDOLM@STER MOVIE.mkv");
+////using var inFc = FormatContext.OpenInputUrl("C:\\Users\\Sekoree\\Music\\Molly - BAGS.flac");
+////using var inFc = FormatContext.OpenInputUrl("C:\\Users\\Sekoree\\Music\\Jiyagi-feat.-Kid-Berry-Ohne-Dich-v2.mp3");
+////using var inFc = FormatContext.OpenInputUrl("C:\\Users\\Sekoree\\Music\\iTunes\\iTunes Media\\Music\\Akari24\\Crack Cat - Single\\01 Crack Cat.m4a");
+////using var inFc = FormatContext.OpenInputUrl("C:\\Users\\Sekoree\\Music\\Third Rail - mekaloton.wav");
+//inFc.LoadStreamInfo();
+//var inAudioStream = inFc.GetVideoStream();
+//using var audioDecoder = new CodecContext(Codec.FindDecoderById(inAudioStream.Codecpar!.CodecId));
+//audioDecoder.FillParameters(inAudioStream.Codecpar);
+//audioDecoder.Open();
+//audioDecoder.ChLayout = inAudioStream.Codecpar!.ChLayout;
 //
-//await ValueTaskEx.WhenAll(
-//    channel.StopAsync(),
-//    channel2.StopAsync(),
-//    channel3.StopAsync()
-//);
+//using var outFc = FormatContext.AllocOutput(fileName: filePath, formatName: "mp4");
+////var outCodec = Codec.FindEncoderByName("pcm_s16le");
+//var outCodec = Codec.FindEncoderById(audioDecoder.CodecId);
+//outFc.VideoCodec = outCodec;
+//var outAudioStream = outFc.NewStream(outCodec);
+//using var audioEncoder = new CodecContext(outCodec);
+////audioEncoder.ChLayout = audioDecoder.ChLayout;
+////audioEncoder.SampleFormat = outFc.AudioCodec!.Value.NegociateSampleFormat(AVSampleFormat.S16);
+////audioEncoder.SampleRate = outFc.AudioCodec!.Value.NegociateSampleRates(audioDecoder.SampleRate);
+//audioEncoder.PixelFormat = (AVPixelFormat)inAudioStream.Codecpar.Format;
+//audioEncoder.Height = inAudioStream.Codecpar.Height;
+//audioEncoder.Width = inAudioStream.Codecpar.Width;
+//audioEncoder.TimeBase = inAudioStream.TimeBase;
+//audioEncoder.Open(outFc.VideoCodec);
+//outAudioStream.Codecpar!.CopyFrom(audioEncoder);
 //
-//await Task.Delay(5000);
-//
-//await ValueTaskEx.WhenAll(
-//    channel.PlayAsync(),
-//    channel2.PlayAsync(),
-//    channel3.PlayAsync()
-//);
-
-await Task.Delay(-1);
+//using var io = IOContext.OpenWrite(filePath);
+//outFc.Pb = io;
+//outFc.WriteHeader();
+//MediaThreadQueue<Frame> decodingQueue =
+//    inFc.ReadPackets(inAudioStream.Index).DecodeAllPackets(inFc, videoCodec: audioDecoder).ToThreadQueue(boundedCapacity: 256);
+//MediaThreadQueue<Packet> encodingQueue = decodingQueue.GetConsumingEnumerable().ConvertFrames(audioEncoder)
+//        .EncodeFrames(audioEncoder).ToThreadQueue( boundedCapacity: 256);
+//encodingQueue.GetConsumingEnumerable().WriteAll(outFc);
+//outFc.WriteTrailer();
+//var timeEnd = Stopwatch.GetTimestamp();
+//var ts = TimeSpan.FromSeconds((timeEnd - timeStart) / (double)Stopwatch.Frequency);
+//Console.WriteLine($"Time: {ts}");
+//Console.WriteLine("Done");

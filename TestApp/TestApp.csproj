@@ -2,18 +2,25 @@
 
     <PropertyGroup>
         <OutputType>Exe</OutputType>
-        <TargetFramework>net8.0</TargetFramework>
+        <TargetFramework>net9.0</TargetFramework>
         <LangVersion>latest</LangVersion>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <PublishAot>true</PublishAot>
         <InvariantGlobalization>true</InvariantGlobalization>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     </PropertyGroup>
 
     <ItemGroup>
+      <PackageReference Include="FFmpeg.GPL" Version="20241223.1.0" />
+      <PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.0" />
+      <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="9.0.0" />
+      <PackageReference Include="Sdcb.FFmpeg" Version="7.0.0" />
+    </ItemGroup>
+
+    <ItemGroup>
       <ProjectReference Include="..\DataBackends\Local\Local.csproj" />
-      <ProjectReference Include="..\Manager.Shared\Manager.Shared.csproj" />
-      <ProjectReference Include="..\Manager.SimplePlayer\Manager.SimplePlayer.csproj" />
+      <ProjectReference Include="..\Manager2.Shared\Manager2.Shared.csproj" />
       <ProjectReference Include="..\MediaBackends\BassPlayer\BassPlayer.csproj" />
     </ItemGroup>
 

@@ -3,6 +3,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Timers;
 using Sdcb.FFmpeg.Codecs;
+using Sdcb.FFmpeg.Common;
 using Sdcb.FFmpeg.Formats;
 using Sdcb.FFmpeg.Raw;
 using Sdcb.FFmpeg.Swscales;
@@ -12,8 +13,9 @@ using Timer = System.Timers.Timer;
 
 namespace FV;
 
-public class VideoDecoder : IDisposable
+public unsafe class VideoDecoder : IDisposable
 {
+    private AVBufferRef* _buffer;
     private byte_ptrArray4 _targetData;
     public IntPtr TargetDataFirst => _targetData[0];
     private int_array4 _targetLineSize;
@@ -34,19 +36,16 @@ public class VideoDecoder : IDisposable
 
     public int FrameHeight { get; set; }
     public int FrameWidth { get; set; }
-    public TimeSpan FrameDuration { get; set; }
-    public IntPtr BufferPtr { get; set; }
 
+    public TimeSpan FrameDuration { get; set; }
     public Frame? MainFrame { get; set; }
     public Packet? MainPacket { get; set; }
-
 
     public Action? OnFrameDecoded { get; set; }
 
     public System.Timers.Timer? DecodeTimer { get; private set; }
     public bool IsPlaying { get; private set; } = false;
     private long _startTimestamp = 0;
-
 
     public bool InitializeFromFile(string path)
     {
@@ -75,33 +74,35 @@ public class VideoDecoder : IDisposable
         SwsContext = new PixelConverter(FrameWidth, FrameHeight, CodecContext.PixelFormat, FrameWidth, FrameHeight,
             AVPixelFormat.Bgr0);
         var bufferSize = ffmpeg.av_image_get_buffer_size(AVPixelFormat.Bgr0, FrameWidth, FrameHeight, 1);
-        BufferPtr = Marshal.AllocHGlobal(bufferSize);
+        _buffer = ffmpeg.av_buffer_alloc((uint)bufferSize);
         _targetData = new byte_ptrArray4();
         _targetLineSize = new int_array4();
-        unsafe
-        {
-            var error = ffmpeg.av_image_fill_arrays(ref _targetData, ref _targetLineSize, (byte*)BufferPtr,
-                AVPixelFormat.Bgr0, FrameWidth, FrameHeight, 1);
-            if (error < 0)
-                throw new Exception("Failed to fill arrays");
-        }
+        var error = ffmpeg.av_image_fill_arrays(ref _targetData, ref _targetLineSize, _buffer->data,
+            AVPixelFormat.Bgr0, FrameWidth, FrameHeight, 1);
+        if (error < 0)
+            throw new Exception("Failed to fill arrays");
 
         MainFrame = new Frame();
         MainPacket = new Packet();
-        DecodeTimer = new Timer(TimeSpan.FromMilliseconds(1));
+        DecodeTimer = new Timer(FrameDuration == TimeSpan.Zero ? 1 : FrameDuration.Milliseconds / 10.0); // Adjust timer interval based on frame rate
         DecodeTimer.Elapsed += PushFrame;
         return true;
     }
-    
+
     private object _lock = new object();
     private void PushFrame(object? sender, ElapsedEventArgs args)
     {
         if (!IsPlaying)
             return;
-        var shouldBeFrame = (long)((Stopwatch.GetTimestamp() - _startTimestamp) / (Stopwatch.Frequency / FrameRate));
-        if (shouldBeFrame == CurrentFrame)
+
+        var elapsedTime = (Stopwatch.GetTimestamp() - _startTimestamp) / (double)Stopwatch.Frequency;
+        var shouldBeFrame = (long)(elapsedTime * FrameRate);
+
+        if (shouldBeFrame <= CurrentFrame)
             return;
+
         CurrentFrame = shouldBeFrame;
+
         lock (_lock)
         {
             try
@@ -119,6 +120,7 @@ public class VideoDecoder : IDisposable
 
                     if (MainPacket.StreamIndex != VideoStream!.Value.Index)
                         continue;
+
                     try
                     {
                         CodecContext!.SendPacket(MainPacket);
@@ -126,19 +128,13 @@ public class VideoDecoder : IDisposable
                         if (packetResult is CodecResult.EOF or < 0)
                             return;
 
-                        unsafe
-                        {
-                            packetResult = (CodecResult)ffmpeg.sws_scale(SwsContext!, MainFrame.Data.ToRawArray(),
-                                MainFrame.Linesize.ToArray(), 0, FrameHeight, _targetData.ToRawArray(),
-                                _targetLineSize.ToArray());
-                            if (packetResult < 0)
-                            {
-                                return;
-                            }
-                        }
+                        packetResult = (CodecResult)ffmpeg.sws_scale(SwsContext!, MainFrame.Data.ToRawArray(),
+                            MainFrame.Linesize.ToArray(), 0, FrameHeight, _targetData.ToRawArray(), _targetLineSize.ToArray());
+                        if (packetResult < 0)
+                            return;
 
                         OnFrameDecoded?.Invoke();
-                        return;
+                        break;
                     }
                     catch (Exception e)
                     {
@@ -152,17 +148,14 @@ public class VideoDecoder : IDisposable
             }
         }
     }
+
     public void CopyToBitmap(IntPtr address, int rowBytes)
     {
-        for (var i = 0; i < FrameHeight; i++)
-        {
-            unsafe
-            {
-                Unsafe.CopyBlock((address + rowBytes * i).ToPointer(),
-                    ((byte*)_targetData[0] + i * _targetLineSize[0]),
-                    (uint)_targetLineSize[0]);
-            }
-        }
+        if (SwsContext == null || MainFrame == null)
+            return;
+
+        Unsafe.CopyBlock(address.ToPointer(), _targetData[0].ToPointer(),
+            (uint)(_targetLineSize[0] * FrameHeight));
     }
 
     public void Start()
@@ -172,6 +165,7 @@ public class VideoDecoder : IDisposable
         IsPlaying = true;
         _startTimestamp = Stopwatch.GetTimestamp();
         DecodeTimer!.Start();
+        OnFrameDecoded?.Invoke();
     }
 
     public void Stop()
@@ -189,7 +183,15 @@ public class VideoDecoder : IDisposable
         CodecContext?.Dispose();
         FormatContext?.Dispose();
         SwsContext?.Dispose();
-        Marshal.FreeHGlobal(BufferPtr);
+        try
+        {
+            ffmpeg.av_free(_buffer);
+        }
+        catch (Exception e)
+        {
+            Debug.WriteLine(e);
+        }
+
         DecodeTimer?.Dispose();
     }
 }

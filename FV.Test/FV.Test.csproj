@@ -7,16 +7,16 @@
         <ApplicationManifest>app.manifest</ApplicationManifest>
         <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-        <PublishAot>false</PublishAot>
+        <PublishAot>true</PublishAot>
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Avalonia" Version="11.2.0-beta1" />
-        <PackageReference Include="Avalonia.Desktop" Version="11.2.0-beta1" />
-        <PackageReference Include="Avalonia.Themes.Fluent" Version="11.2.0-beta1" />
-        <PackageReference Include="Avalonia.Fonts.Inter" Version="11.2.0-beta1" />
+        <PackageReference Include="Avalonia" Version="11.2.0-rc1" />
+        <PackageReference Include="Avalonia.Desktop" Version="11.2.0-rc1" />
+        <PackageReference Include="Avalonia.Themes.Fluent" Version="11.2.0-rc1" />
+        <PackageReference Include="Avalonia.Fonts.Inter" Version="11.2.0-rc1" />
         <!--Condition below is needed to remove Avalonia.Diagnostics package from build output in Release configuration.-->
-        <PackageReference Condition="'$(Configuration)' == 'Debug'" Include="Avalonia.Diagnostics" Version="11.2.0-beta1" />
+        <PackageReference Condition="'$(Configuration)' == 'Debug'" Include="Avalonia.Diagnostics" Version="11.2.0-rc1" />
         <PackageReference Include="NAudio" Version="2.2.1" />
     </ItemGroup>
 

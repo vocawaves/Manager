@@ -1,15 +1,11 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>net8.0</TargetFramework>
+        <TargetFramework>net9.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <RootNamespace>Manager.MediaBackends.BassPlayer</RootNamespace>
     </PropertyGroup>
-
-    <ItemGroup>
-      <ProjectReference Include="$(SolutionDir)\Manager.Shared\Manager.Shared.csproj" />
-    </ItemGroup>
 
     <ItemGroup>
       <None Update="bass.dll">
@@ -47,6 +43,10 @@
 
     <ItemGroup>
       <Folder Include="BassPlugins\" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\..\Manager2.Shared\Manager2.Shared.csproj" />
     </ItemGroup>
 
 </Project>
