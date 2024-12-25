@@ -42,10 +42,6 @@
     </ItemGroup>
 
     <ItemGroup>
-      <Folder Include="BassPlugins\" />
-    </ItemGroup>
-
-    <ItemGroup>
       <ProjectReference Include="..\..\Manager2.Shared\Manager2.Shared.csproj" />
     </ItemGroup>
 
