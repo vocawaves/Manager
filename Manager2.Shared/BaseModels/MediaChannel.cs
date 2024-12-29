@@ -1,4 +1,5 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using Manager2.Shared.Entities;
 using Manager2.Shared.Enums;
 using Microsoft.Extensions.Logging;
 
@@ -60,17 +61,17 @@ public abstract partial class MediaChannel : ObservableObject, IAsyncDisposable
         Logger = logger;
     }
 
-    public abstract ValueTask<bool> PlayAsync();
+    public abstract ValueTask<ReturnResult> PlayAsync();
     
-    public abstract ValueTask<bool> PauseAsync();
+    public abstract ValueTask<ReturnResult> PauseAsync();
     
-    public abstract ValueTask<bool> ResumeAsync();
+    public abstract ValueTask<ReturnResult> ResumeAsync();
     
-    public abstract ValueTask<bool> StopAsync();
+    public abstract ValueTask<ReturnResult> StopAsync();
     
-    public abstract ValueTask<bool> SetPositionAsync(TimeSpan position);
+    public abstract ValueTask<ReturnResult> SetPositionAsync(TimeSpan position);
     
-    public abstract ValueTask<bool> SetStateAsync(ChannelState state);
+    public abstract ValueTask<ReturnResult> SetStateAsync(ChannelState state);
 
     public virtual ValueTask DisposeAsync()
     {

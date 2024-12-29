@@ -5,11 +5,6 @@ using Local;
 using Manager.MediaBackends;
 using Manager2.Shared;
 using Microsoft.Extensions.Logging;
-using Sdcb.FFmpeg.Codecs;
-using Sdcb.FFmpeg.Formats;
-using Sdcb.FFmpeg.Toolboxs.Extensions;
-using Sdcb.FFmpeg.Utils;
-using LogLevel = Sdcb.FFmpeg.Raw.LogLevel;
 
 Console.WriteLine("Hello, World!");
 
@@ -39,7 +34,7 @@ if (!couldInit)
 }
 
 var me = await f.GetMediaItemByPathAsync("C:\\Users\\Sekoree\\Music\\IA_05 -SHINE-\\01_02_残響ディスタンス (feat. hirihiri & lilbesh ramko).flac");
-if (me == null)
+if (!me)
 {
     Console.WriteLine("Media item is null");
     return;
@@ -59,14 +54,14 @@ if (me == null)
 //    return;
 //}
 
-var channel = await b.CreateMediaChannelAsync(me.DefaultAudioStream!);
-if (channel == null)
+var channelResult = await b.CreateMediaChannelAsync(me.Value?.DefaultAudioStream!);
+if (!channelResult)
 {
     Console.WriteLine("Channel is null");
     return;
 }
 
-await channel.PlayAsync();
+await channelResult.Value!.PlayAsync();
 
 var endTime = Stopwatch.GetTimestamp();
 var ts = TimeSpan.FromSeconds((endTime - startTime) / (double)Stopwatch.Frequency);

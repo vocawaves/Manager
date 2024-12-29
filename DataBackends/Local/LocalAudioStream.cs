@@ -1,4 +1,5 @@
 using Manager2.Shared.BaseModels;
+using Manager2.Shared.Entities;
 using Manager2.Shared.Enums;
 using Microsoft.Extensions.Logging;
 using Sdcb.FFmpeg.Codecs;
@@ -6,6 +7,7 @@ using Sdcb.FFmpeg.Formats;
 using Sdcb.FFmpeg.Raw;
 using Sdcb.FFmpeg.Toolboxs.Extensions;
 using Sdcb.FFmpeg.Utils;
+using LogLevel = Microsoft.Extensions.Logging.LogLevel;
 using MediaStream = Sdcb.FFmpeg.Formats.MediaStream;
 
 namespace Local;
@@ -13,18 +15,20 @@ namespace Local;
 public class LocalAudioStream : AudioStream
 {
     public LocalAudioStream(LocalDataService mediaDataService, MediaItem mediaItem, object identifier,
-        ILogger<AudioStream>? logger = default) : base(mediaDataService, mediaItem, identifier, logger)
+        ILogger<AudioStream>? logger = null) : base(mediaDataService, mediaItem, identifier, logger)
     {
     }
 
-    public override async ValueTask<bool> ExtractStreamAsync(IProgress<double>? progress = null,
+    public override async ValueTask<ReturnResult> ExtractStreamAsync(IProgress<double>? progress = null,
         CancellationToken cancellationToken = default)
     {
+        var result = new ReturnResult();
         var cachePath = MediaDataService.CachePath;
         if (string.IsNullOrWhiteSpace(cachePath))
         {
             Logger?.LogError("Cache path is not set");
-            return false;
+            result.Messages.Add(new ReturnMessage(LogLevel.Error, "Cache path is not set"));
+            return result;
         }
 
         cachePath = Path.Combine(cachePath, MediaItem.PathTitle + $".audio{this.Identifier}");
@@ -82,10 +86,13 @@ public class LocalAudioStream : AudioStream
         var progressCts = new CancellationTokenSource();
         _ = Task.Run(async () =>
         {
-            var duration = stream.Duration <= 0 ? (inputFc.Duration / ffmpeg.AV_TIME_BASE) : stream.GetDurationInSeconds();
+            var duration = stream.Duration <= 0
+                ? (inputFc.Duration / ffmpeg.AV_TIME_BASE)
+                : stream.GetDurationInSeconds();
             if (duration == 0)
             {
-                Logger?.LogWarning("Duration is 0");
+                Logger?.LogWarning("Duration is 0, cant progress report");
+                result.Messages.Add(new ReturnMessage(LogLevel.Warning, "Duration is 0, cant progress report"));
                 return;
             }
 
@@ -124,99 +131,124 @@ public class LocalAudioStream : AudioStream
         progress?.Report(1);
         Logger?.LogInformation("Extracted stream: {Index}", Identifier);
         ExtractedStreamPath = cachePath;
-        return true;
+        result.Success = true;
+        return result;
     }
 
-    public override ValueTask<bool> RemoveExtractedStreamAsync(CancellationToken cancellationToken = default)
+    public override ValueTask<ReturnResult> RemoveExtractedStreamAsync(CancellationToken cancellationToken = default)
     {
+        var result = new ReturnResult();
         if (ExtractState != ExtractState.Extracted)
         {
-            Logger?.LogDebug("Stream is not extracted");
-            return ValueTask.FromResult(false);
+            Logger?.LogInformation("Stream is not extracted, cant remove");
+            result.Messages.Add(new ReturnMessage(LogLevel.Information, "Stream is not extracted, cant remove"));
+            return ValueTask.FromResult(result);
         }
 
         if (string.IsNullOrWhiteSpace(ExtractedStreamPath))
         {
-            Logger?.LogError("Extracted stream path is not set");
-            return ValueTask.FromResult(false);
+            Logger?.LogError("Extracted stream path is not set, but state is extracted");
+            result.Messages.Add(new ReturnMessage(LogLevel.Warning,
+                "Extracted stream path is not set, but state is extracted"));
         }
-
-        if (!File.Exists(ExtractedStreamPath))
+        else if (!File.Exists(ExtractedStreamPath))
         {
-            Logger?.LogError("Extracted stream file does not exist: {Path}", ExtractedStreamPath);
-            return ValueTask.FromResult(false);
+            Logger?.LogWarning("Extracted stream file does not exist: {Path}", ExtractedStreamPath);
+            result.Messages.Add(new ReturnMessage(LogLevel.Warning,
+                $"Extracted stream file does not exist: {ExtractedStreamPath}"));
+        }
+        else
+        {
+            try
+            {
+                File.Delete(ExtractedStreamPath);
+            }
+            catch (Exception e)
+            {
+                Logger?.LogError(e, "Failed to remove extracted stream: {Path}", ExtractedStreamPath);
+                result.Messages.Add(new ReturnMessage(LogLevel.Error,
+                    $"Failed to remove extracted stream: {ExtractedStreamPath}"));
+                return ValueTask.FromResult(result);
+            }
         }
 
         Logger?.LogDebug("Removing extracted stream: {Path}", ExtractedStreamPath);
-        File.Delete(ExtractedStreamPath);
         Logger?.LogInformation("Removed extracted stream: {Path}", ExtractedStreamPath);
         ExtractedStreamPath = null;
         ExtractState = ExtractState.NotExtracted;
         ExtractProgress = 0;
-        return ValueTask.FromResult(true);
+        result.Success = true;
+        return ValueTask.FromResult(result);
     }
 
-    public override ValueTask<string?> GetExtractedStreamPathAsync(CancellationToken cancellationToken = default)
+    public override ValueTask<ReturnResult<string>> GetExtractedStreamPathAsync(
+        CancellationToken cancellationToken = default)
     {
-        if (ExtractState != ExtractState.Extracted)
+        var result = new ReturnResult<string>();
+        switch (ExtractState)
         {
-            Logger?.LogDebug("Stream is not extracted");
-            return ValueTask.FromResult<string?>(null);
+            case ExtractState.NotExtracted:
+                Logger?.LogError("Stream is not extracted");
+                result.Messages.Add(new ReturnMessage(LogLevel.Error, "Stream is not extracted"));
+                return ValueTask.FromResult(result);
+            case ExtractState.Extracting:
+                Logger?.LogError("Stream is extracting");
+                result.Messages.Add(new ReturnMessage(LogLevel.Error, "Stream is extracting"));
+                return ValueTask.FromResult(result);
         }
 
-        if (ExtractState == ExtractState.Extracting)
-        {
-            Logger?.LogDebug("Stream is extracting");
-            return ValueTask.FromResult<string?>(null);
-        }
-
-        if (string.IsNullOrWhiteSpace(ExtractedStreamPath))
+        if (string.IsNullOrWhiteSpace(ExtractedStreamPath) || !File.Exists(ExtractedStreamPath))
         {
             Logger?.LogError("Extracted stream path is not set");
-            return ValueTask.FromResult<string?>(null);
-        }
-        
-        if (!File.Exists(ExtractedStreamPath))
-        {
-            Logger?.LogError("Extracted stream file does not exist: {Path}", ExtractedStreamPath);
+            result.Messages.Add(new ReturnMessage(LogLevel.Error, "Extracted stream path is not set"));
             ExtractState = ExtractState.NotExtracted;
             ExtractedStreamPath = null;
             ExtractProgress = 0;
-            return ValueTask.FromResult<string?>(null);
+            return ValueTask.FromResult(result);
         }
 
-        return ValueTask.FromResult<string?>(ExtractedStreamPath);
+        result.Value = ExtractedStreamPath;
+        result.Success = true;
+        return ValueTask.FromResult(result);
     }
 
-    public override ValueTask<Stream?> GetExtractedStreamAsync(CancellationToken cancellationToken = default)
+    public override ValueTask<ReturnResult<Stream>> GetExtractedStreamAsync(CancellationToken cancellationToken = default)
     {
-        if (ExtractState != ExtractState.Extracted)
+        var result = new ReturnResult<Stream>();
+        switch (ExtractState)
         {
-            Logger?.LogDebug("Stream is not extracted");
-            return ValueTask.FromResult<Stream?>(null);
+            case ExtractState.NotExtracted:
+                Logger?.LogError("Stream is not extracted");
+                result.Messages.Add(new ReturnMessage(LogLevel.Error, "Stream is not extracted"));
+                return ValueTask.FromResult(result);
+            case ExtractState.Extracting:
+                Logger?.LogError("Stream is extracting");
+                result.Messages.Add(new ReturnMessage(LogLevel.Error, "Stream is extracting"));
+                return ValueTask.FromResult(result);
         }
 
-        if (ExtractState == ExtractState.Extracting)
+        if (string.IsNullOrWhiteSpace(ExtractedStreamPath) || !File.Exists(ExtractedStreamPath))
         {
-            Logger?.LogDebug("Stream is extracting");
-            return ValueTask.FromResult<Stream?>(null);
-        }
-
-        if (string.IsNullOrWhiteSpace(ExtractedStreamPath))
-        {
-            Logger?.LogError("Extracted stream path is not set");
-            return ValueTask.FromResult<Stream?>(null);
-        }
-
-        if (!File.Exists(ExtractedStreamPath))
-        {
-            Logger?.LogError("Extracted stream file does not exist: {Path}", ExtractedStreamPath);
+            Logger?.LogError("Extracted stream path is not set or file does not exist");
+            result.Messages.Add(new ReturnMessage(LogLevel.Error, $"Extracted stream path is not set or file does not exist"));
             ExtractState = ExtractState.NotExtracted;
             ExtractedStreamPath = null;
             ExtractProgress = 0;
-            return ValueTask.FromResult<Stream?>(null);
+            return ValueTask.FromResult(result);
         }
 
-        return ValueTask.FromResult<Stream?>(File.OpenRead(ExtractedStreamPath));
+        try
+        {
+            var stream = File.OpenRead(ExtractedStreamPath);
+            result.Value = stream;
+            result.Success = true;
+            return ValueTask.FromResult(result);
+        }
+        catch (Exception e)
+        {
+            Logger?.LogError(e, "Failed to open extracted stream: {Path}", ExtractedStreamPath);
+            result.Messages.Add(new ReturnMessage(LogLevel.Error, $"Failed to open extracted stream: {ExtractedStreamPath}"));
+            return ValueTask.FromResult(result);
+        }
     }
 }

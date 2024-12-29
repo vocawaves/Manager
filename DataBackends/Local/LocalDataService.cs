@@ -1,10 +1,12 @@
 ﻿using Manager2.Shared;
 using Manager2.Shared.BaseModels;
+using Manager2.Shared.Entities;
 using Microsoft.Extensions.Logging;
 using Sdcb.FFmpeg.Codecs;
 using Sdcb.FFmpeg.Formats;
 using Sdcb.FFmpeg.Raw;
 using Sdcb.FFmpeg.Toolboxs.Extensions;
+using LogLevel = Microsoft.Extensions.Logging.LogLevel;
 
 namespace Local;
 
@@ -20,12 +22,14 @@ public partial class LocalDataService : MediaDataService
             Directory.CreateDirectory(CachePath);
     }
     
-    public override ValueTask<MediaItem?> GetMediaItemByPathAsync(string path)
+    public override ValueTask<ReturnResult<MediaItem>> GetMediaItemByPathAsync(string path)
     {
+        var result = new ReturnResult<MediaItem>();
         if (!File.Exists(path))
         {
             _logger?.LogError("File does not exist: {Path}", path);
-            return ValueTask.FromResult<MediaItem?>(default);
+            result.Messages.Add(new ReturnMessage(LogLevel.Error, "File does not exist: {Path}", path));
+            return ValueTask.FromResult(result);
         }
         
         try
@@ -52,6 +56,7 @@ public partial class LocalDataService : MediaDataService
                 if (ctxStream.Codecpar == null)
                 {
                     _logger?.LogWarning("Stream has no codec parameters: {Index}", ctxStream.Index);
+                    result.Messages.Add(new ReturnMessage(LogLevel.Warning, "Stream has no codec parameters: {Index}", ctxStream.Index));
                     continue;
                 }
 
@@ -108,35 +113,39 @@ public partial class LocalDataService : MediaDataService
                     case AVMediaType.Unknown:
                     default:
                         _logger?.LogWarning("Not handling codec type: {CodecType}", ctxStream.Codecpar.CodecType);
+                        result.Messages.Add(new ReturnMessage(LogLevel.Warning, "Not handling codec type: {CodecType}", ctxStream.Codecpar.CodecType));
                         break;
                 }
             }
                 
-            return ValueTask.FromResult<MediaItem?>(mediaItem);
+            result.Value = mediaItem;
+            result.Success = true;
+            return ValueTask.FromResult(result);
         }
         catch (Exception e)
         {
             _logger?.LogError(e, "Failed to open file: {Path}", path);
-            return ValueTask.FromResult<MediaItem?>(default);
+            result.Messages.Add(new ReturnMessage(LogLevel.Error, "Failed to open file: {Path}", path));
+            return ValueTask.FromResult(result);
         }
     }
     
-    public ValueTask<MediaItem?> GetMediaItemBySearchResultAsync(LocalSearchResult searchResult)
+    public ValueTask<ReturnResult<MediaItem>> GetMediaItemBySearchResultAsync(LocalSearchResult searchResult)
     {
         throw new NotImplementedException();
     }
     
-    public ValueTask<IEnumerable<MediaItem>?> GetMediaItemsByPathAsync(string path)
+    public ValueTask<ReturnResult<IEnumerable<MediaItem>>> GetMediaItemsByPathAsync(string path)
     {
         throw new NotImplementedException();
     }
     
-    public ValueTask<IEnumerable<MediaItem>?> GetMediaItemsBySearchResultsAsync(IEnumerable<LocalSearchResult> searchResults)
+    public ValueTask<ReturnResult<IEnumerable<MediaItem>>> GetMediaItemsBySearchResultsAsync(IEnumerable<LocalSearchResult> searchResults)
     {
         throw new NotImplementedException();
     }
     
-    public ValueTask<IEnumerable<LocalSearchResult>?> SearchAsync(string query, string directory)
+    public ValueTask<ReturnResult<IEnumerable<LocalSearchResult>>> SearchAsync(string query, string directory)
     {
         throw new NotImplementedException();
     }

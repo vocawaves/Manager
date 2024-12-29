@@ -1,5 +1,6 @@
 using System.Runtime.CompilerServices;
 using CommunityToolkit.Mvvm.ComponentModel;
+using Manager2.Shared.Entities;
 using Manager2.Shared.Enums;
 using Microsoft.Extensions.Logging;
 
@@ -44,16 +45,16 @@ public abstract partial class MediaItem : ObservableObject
         Logger = logger;
     }
 
-    public abstract ValueTask<bool> CacheAsync(IProgress<double>? progress = null,
+    public abstract ValueTask<ReturnResult> CacheAsync(IProgress<double>? progress = null,
         CancellationToken cancellationToken = default);
     
-    public abstract ValueTask<bool> CacheAsync(IProgress<double>? progress = null,
+    public abstract ValueTask<ReturnResult> CacheAsync(IProgress<double>? progress = null,
         CancellationToken cancellationToken = default, params MediaStream[] streamsToCache);
 
-    public abstract ValueTask<bool> RemoveCacheAsync(bool removeExtractedStreams = true,
+    public abstract ValueTask<ReturnResult> RemoveCacheAsync(bool removeExtractedStreams = true,
         CancellationToken cancellationToken = default);
 
-    public abstract ValueTask<string?> GetCachePathAsync(CancellationToken cancellationToken = default);
+    public abstract ValueTask<ReturnResult<string>> GetCachePathAsync(CancellationToken cancellationToken = default);
 
-    public abstract ValueTask<Stream?> GetStreamAsync(CancellationToken cancellationToken = default);
+    public abstract ValueTask<ReturnResult<Stream>> GetStreamAsync(CancellationToken cancellationToken = default);
 }
